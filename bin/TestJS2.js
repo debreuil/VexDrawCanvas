@@ -1,0 +1,772 @@
+var $estr = function() { return js.Boot.__string_rec(this,''); };
+function $extend(from, fields) {
+	function inherit() {}; inherit.prototype = from; var proto = new inherit();
+	for (var name in fields) proto[name] = fields[name];
+	return proto;
+}
+var Hash = function() {
+	this.h = { };
+};
+Hash.__name__ = true;
+Hash.prototype = {
+	toString: function() {
+		var s = new StringBuf();
+		s.b += Std.string("{");
+		var it = this.keys();
+		while( it.hasNext() ) {
+			var i = it.next();
+			s.b += Std.string(i);
+			s.b += Std.string(" => ");
+			s.b += Std.string(Std.string(this.get(i)));
+			if(it.hasNext()) s.b += Std.string(", ");
+		}
+		s.b += Std.string("}");
+		return s.b;
+	}
+	,iterator: function() {
+		return { ref : this.h, it : this.keys(), hasNext : function() {
+			return this.it.hasNext();
+		}, next : function() {
+			var i = this.it.next();
+			return this.ref["$" + i];
+		}};
+	}
+	,keys: function() {
+		var a = [];
+		for( var key in this.h ) {
+		if(this.h.hasOwnProperty(key)) a.push(key.substr(1));
+		}
+		return HxOverrides.iter(a);
+	}
+	,remove: function(key) {
+		key = "$" + key;
+		if(!this.h.hasOwnProperty(key)) return false;
+		delete(this.h[key]);
+		return true;
+	}
+	,exists: function(key) {
+		return this.h.hasOwnProperty("$" + key);
+	}
+	,get: function(key) {
+		return this.h["$" + key];
+	}
+	,set: function(key,value) {
+		this.h["$" + key] = value;
+	}
+	,__class__: Hash
+}
+var HxOverrides = function() { }
+HxOverrides.__name__ = true;
+HxOverrides.dateStr = function(date) {
+	var m = date.getMonth() + 1;
+	var d = date.getDate();
+	var h = date.getHours();
+	var mi = date.getMinutes();
+	var s = date.getSeconds();
+	return date.getFullYear() + "-" + (m < 10?"0" + m:"" + m) + "-" + (d < 10?"0" + d:"" + d) + " " + (h < 10?"0" + h:"" + h) + ":" + (mi < 10?"0" + mi:"" + mi) + ":" + (s < 10?"0" + s:"" + s);
+}
+HxOverrides.strDate = function(s) {
+	switch(s.length) {
+	case 8:
+		var k = s.split(":");
+		var d = new Date();
+		d.setTime(0);
+		d.setUTCHours(k[0]);
+		d.setUTCMinutes(k[1]);
+		d.setUTCSeconds(k[2]);
+		return d;
+	case 10:
+		var k = s.split("-");
+		return new Date(k[0],k[1] - 1,k[2],0,0,0);
+	case 19:
+		var k = s.split(" ");
+		var y = k[0].split("-");
+		var t = k[1].split(":");
+		return new Date(y[0],y[1] - 1,y[2],t[0],t[1],t[2]);
+	default:
+		throw "Invalid date format : " + s;
+	}
+}
+HxOverrides.cca = function(s,index) {
+	var x = s.charCodeAt(index);
+	if(x != x) return undefined;
+	return x;
+}
+HxOverrides.substr = function(s,pos,len) {
+	if(pos != null && pos != 0 && len != null && len < 0) return "";
+	if(len == null) len = s.length;
+	if(pos < 0) {
+		pos = s.length + pos;
+		if(pos < 0) pos = 0;
+	} else if(len < 0) len = s.length + len - pos;
+	return s.substr(pos,len);
+}
+HxOverrides.remove = function(a,obj) {
+	var i = 0;
+	var l = a.length;
+	while(i < l) {
+		if(a[i] == obj) {
+			a.splice(i,1);
+			return true;
+		}
+		i++;
+	}
+	return false;
+}
+HxOverrides.iter = function(a) {
+	return { cur : 0, arr : a, hasNext : function() {
+		return this.cur < this.arr.length;
+	}, next : function() {
+		return this.arr[this.cur++];
+	}};
+}
+var IntHash = function() {
+	this.h = { };
+};
+IntHash.__name__ = true;
+IntHash.prototype = {
+	toString: function() {
+		var s = new StringBuf();
+		s.b += Std.string("{");
+		var it = this.keys();
+		while( it.hasNext() ) {
+			var i = it.next();
+			s.b += Std.string(i);
+			s.b += Std.string(" => ");
+			s.b += Std.string(Std.string(this.get(i)));
+			if(it.hasNext()) s.b += Std.string(", ");
+		}
+		s.b += Std.string("}");
+		return s.b;
+	}
+	,iterator: function() {
+		return { ref : this.h, it : this.keys(), hasNext : function() {
+			return this.it.hasNext();
+		}, next : function() {
+			var i = this.it.next();
+			return this.ref[i];
+		}};
+	}
+	,keys: function() {
+		var a = [];
+		for( var key in this.h ) {
+		if(this.h.hasOwnProperty(key)) a.push(key | 0);
+		}
+		return HxOverrides.iter(a);
+	}
+	,remove: function(key) {
+		if(!this.h.hasOwnProperty(key)) return false;
+		delete(this.h[key]);
+		return true;
+	}
+	,exists: function(key) {
+		return this.h.hasOwnProperty(key);
+	}
+	,get: function(key) {
+		return this.h[key];
+	}
+	,set: function(key,value) {
+		this.h[key] = value;
+	}
+	,__class__: IntHash
+}
+var IntIter = function(min,max) {
+	this.min = min;
+	this.max = max;
+};
+IntIter.__name__ = true;
+IntIter.prototype = {
+	next: function() {
+		return this.min++;
+	}
+	,hasNext: function() {
+		return this.min < this.max;
+	}
+	,__class__: IntIter
+}
+var Main = function() { }
+Main.__name__ = true;
+Main.main = function() {
+}
+var Std = function() { }
+Std.__name__ = true;
+Std["is"] = function(v,t) {
+	return js.Boot.__instanceof(v,t);
+}
+Std.string = function(s) {
+	return js.Boot.__string_rec(s,"");
+}
+Std["int"] = function(x) {
+	return x | 0;
+}
+Std.parseInt = function(x) {
+	var v = parseInt(x,10);
+	if(v == 0 && (HxOverrides.cca(x,1) == 120 || HxOverrides.cca(x,1) == 88)) v = parseInt(x);
+	if(isNaN(v)) return null;
+	return v;
+}
+Std.parseFloat = function(x) {
+	return parseFloat(x);
+}
+Std.random = function(x) {
+	return Math.floor(Math.random() * x);
+}
+var StringBuf = function() {
+	this.b = "";
+};
+StringBuf.__name__ = true;
+StringBuf.prototype = {
+	toString: function() {
+		return this.b;
+	}
+	,addSub: function(s,pos,len) {
+		this.b += HxOverrides.substr(s,pos,len);
+	}
+	,addChar: function(c) {
+		this.b += String.fromCharCode(c);
+	}
+	,add: function(x) {
+		this.b += Std.string(x);
+	}
+	,__class__: StringBuf
+}
+var ddw = ddw || {}
+ddw.Color = function(argb) {
+	this.argb = argb;
+	this.colorString = ddw.Color.getColorString(argb);
+};
+ddw.Color.__name__ = true;
+ddw.Color.getColorString = function(value) {
+	var result;
+	var a = (value & -16777216) >>> 24;
+	var r = (value & 16711680) >>> 16;
+	var g = (value & 65280) >>> 8;
+	var b = value & 255;
+	var vals = r + "," + g + "," + b;
+	if(a < 255) result = "rgba(" + vals + "," + a + ")"; else result = "rgb(" + vals + ")";
+	return result;
+}
+ddw.Color.prototype = {
+	__class__: ddw.Color
+}
+ddw.Definition = function() {
+};
+ddw.Definition.__name__ = true;
+ddw.Definition.prototype = {
+	__class__: ddw.Definition
+}
+ddw.Fill = function() {
+};
+ddw.Fill.__name__ = true;
+ddw.Fill.parseVexFill = function(fill,g) {
+	var result = new ddw.Fill();
+	if(js.Boot.__instanceof(fill,Array)) {
+		result.isGradient = true;
+		var gradKind = fill[0];
+		var tlbr = fill[1];
+		var gradStops = fill[2];
+		result.gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
+		var gs = 0;
+		while(gs < gradStops.length) {
+			var col = ddw.Color.getColorString(gradStops[gs]);
+			result.gradient.addColorStop(gradStops[gs + 1],col);
+			gs += 2;
+		}
+		result.canvasFill = result.gradient;
+	} else {
+		result.isGradient = false;
+		result.color = new ddw.Color(fill);
+		result.canvasFill = result.color.colorString;
+	}
+	return result;
+}
+ddw.Fill.prototype = {
+	__class__: ddw.Fill
+}
+ddw.Instance = function(defId) {
+	this.hasShear = false;
+	this.hasRotation = false;
+	this.hasScale = false;
+	this.shear = 0;
+	this.rotation = 0;
+	this.scaleY = 1;
+	this.scaleX = 1;
+	this.y = 0;
+	this.x = 0;
+	this.defId = defId;
+};
+ddw.Instance.__name__ = true;
+ddw.Instance.parseVexData = function(dinst) {
+	var result = new ddw.Instance(dinst[0]);
+	result.x = dinst[1][0];
+	result.y = dinst[1][1];
+	if(dinst.length > 2 && !js.Boot.__instanceof(dinst[2],String)) {
+		var mxComp = dinst[2];
+		result.scaleX = mxComp[0];
+		result.scaleY = mxComp[1];
+		result.hasScale = true;
+		if(mxComp.length > 2) {
+			result.rotation = mxComp[2];
+			result.hasRotation = true;
+		}
+		if(mxComp.length > 3) {
+			result.shear = mxComp[3];
+			result.hasShear = true;
+		}
+	}
+	if(dinst.length > 3) result.name = dinst[3]; else if(dinst.length > 2 && js.Boot.__instanceof(dinst[2],String)) result.name = dinst[2]; else result.name = "";
+	return result;
+}
+ddw.Instance.prototype = {
+	__class__: ddw.Instance
+}
+ddw.Rectangle = function(x,y,width,height) {
+	this.x = x;
+	this.y = y;
+	this.width = width;
+	this.height = height;
+};
+ddw.Rectangle.__name__ = true;
+ddw.Rectangle.prototype = {
+	__class__: ddw.Rectangle
+}
+ddw.Segment = function() {
+};
+ddw.Segment.__name__ = true;
+ddw.Segment.parseVexSegment = function(seg) {
+	var result = new ddw.Segment();
+	var nums = seg.substring(1).split(",");
+	switch(seg.charAt(0)) {
+	case "M":
+		result.segmentType = ddw.SegmentType.moveTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
+		break;
+	case "L":
+		result.segmentType = ddw.SegmentType.lineTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
+		break;
+	case "Q":
+		result.segmentType = ddw.SegmentType.quadraticCurveTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3])];
+		break;
+	case "C":
+		result.segmentType = ddw.SegmentType.bezierCurveTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3]),Std.parseFloat(nums[4]),Std.parseFloat(nums[5])];
+		break;
+	}
+	return result;
+}
+ddw.Segment.prototype = {
+	__class__: ddw.Segment
+}
+ddw.SegmentType = { __ename__ : true, __constructs__ : ["moveTo","lineTo","quadraticCurveTo","bezierCurveTo"] }
+ddw.SegmentType.moveTo = ["moveTo",0];
+ddw.SegmentType.moveTo.toString = $estr;
+ddw.SegmentType.moveTo.__enum__ = ddw.SegmentType;
+ddw.SegmentType.lineTo = ["lineTo",1];
+ddw.SegmentType.lineTo.toString = $estr;
+ddw.SegmentType.lineTo.__enum__ = ddw.SegmentType;
+ddw.SegmentType.quadraticCurveTo = ["quadraticCurveTo",2];
+ddw.SegmentType.quadraticCurveTo.toString = $estr;
+ddw.SegmentType.quadraticCurveTo.__enum__ = ddw.SegmentType;
+ddw.SegmentType.bezierCurveTo = ["bezierCurveTo",3];
+ddw.SegmentType.bezierCurveTo.toString = $estr;
+ddw.SegmentType.bezierCurveTo.__enum__ = ddw.SegmentType;
+ddw.Shape = function(strokeIndex,fillIndex) {
+	this.strokeIndex = strokeIndex;
+	this.fillIndex = fillIndex;
+	this.segments = new Array();
+};
+ddw.Shape.__name__ = true;
+ddw.Shape.prototype = {
+	__class__: ddw.Shape
+}
+ddw.Stroke = function(color,lineWidth) {
+	this.color = color;
+	this.lineWidth = lineWidth;
+};
+ddw.Stroke.__name__ = true;
+ddw.Stroke.prototype = {
+	__class__: ddw.Stroke
+}
+ddw.Symbol = function() {
+	ddw.Definition.call(this);
+	this.isTimeline = false;
+	this.shapes = new Array();
+};
+ddw.Symbol.__name__ = true;
+ddw.Symbol.parseVex = function(dsym) {
+	var symbol = new ddw.Symbol();
+	symbol.id = dsym.id;
+	symbol.bounds = new ddw.Rectangle(dsym.bounds[0],dsym.bounds[1],dsym.bounds[2],dsym.bounds[3]);
+	var dShapes = dsym.shapes;
+	var _g = 0;
+	while(_g < dShapes.length) {
+		var dShape = dShapes[_g];
+		++_g;
+		var shape = new ddw.Shape(dShape[0],dShape[1]);
+		var segs = dShape[2].split(" ");
+		var _g1 = 0;
+		while(_g1 < segs.length) {
+			var seg = segs[_g1];
+			++_g1;
+			var segment = ddw.Segment.parseVexSegment(seg);
+			shape.segments.push(segment);
+		}
+		symbol.shapes.push(shape);
+	}
+	return symbol;
+}
+ddw.Symbol.drawSymbol = function(symbol,metrics,vo) {
+	var bnds = symbol.bounds;
+	var offsetX = -bnds.x * metrics.scaleX;
+	var offsetY = -bnds.y * metrics.scaleY;
+	var cv = vo.createCanvas(bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
+	vo.transformObject(cv,metrics,offsetX,offsetY);
+	var g = cv.getContext("2d");
+	g.translate(offsetX,offsetY);
+	if(metrics.hasScale) g.scale(metrics.scaleX,metrics.scaleY);
+	var _g = 0, _g1 = symbol.shapes;
+	while(_g < _g1.length) {
+		var shape = _g1[_g];
+		++_g;
+		g.fillStyle = vo.fills[shape.fillIndex].canvasFill;
+		g.lineWidth = vo.strokes[shape.strokeIndex].lineWidth;
+		g.strokeStyle = vo.strokes[shape.strokeIndex].color.colorString;
+		g.beginPath();
+		var _g2 = 0, _g3 = shape.segments;
+		while(_g2 < _g3.length) {
+			var seg = _g3[_g2];
+			++_g2;
+			switch( (seg.segmentType)[1] ) {
+			case 0:
+				g.moveTo(seg.points[0],seg.points[1]);
+				break;
+			case 1:
+				g.lineTo(seg.points[0],seg.points[1]);
+				break;
+			case 2:
+				g.quadraticCurveTo(seg.points[0],seg.points[1],seg.points[2],seg.points[3]);
+				break;
+			case 3:
+				g.bezierCurveTo(seg.points[0],seg.points[1],seg.points[2],seg.points[3],seg.points[4],seg.points[5]);
+				break;
+			}
+		}
+		if(shape.fillIndex > 0) g.fill();
+		if(shape.strokeIndex > 0) g.stroke();
+	}
+}
+ddw.Symbol.__super__ = ddw.Definition;
+ddw.Symbol.prototype = $extend(ddw.Definition.prototype,{
+	__class__: ddw.Symbol
+});
+ddw.Timeline = function() {
+	ddw.Definition.call(this);
+	this.instances = new Array();
+};
+ddw.Timeline.__name__ = true;
+ddw.Timeline.parseVexData = function(dtl) {
+	var result = new ddw.Timeline();
+	result.isTimeline = true;
+	result.id = dtl.id;
+	result.name = dtl.name;
+	result.bounds = new ddw.Rectangle(dtl.bounds[0],dtl.bounds[1],dtl.bounds[2],dtl.bounds[3]);
+	var dInstances = dtl.instances;
+	var _g = 0;
+	while(_g < dInstances.length) {
+		var dInst = dInstances[_g];
+		++_g;
+		var inst = ddw.Instance.parseVexData(dInst);
+		result.instances.push(inst);
+	}
+	return result;
+}
+ddw.Timeline.drawTimeline = function(tl,parent,vo) {
+	var bnds = tl.bounds;
+	var offsetX = -bnds.x;
+	var offsetY = -bnds.y;
+	var _g = 0, _g1 = tl.instances;
+	while(_g < _g1.length) {
+		var inst = _g1[_g];
+		++_g;
+		var def = vo.definitions.get(inst.defId);
+		if(def.isTimeline) ddw.Timeline.drawTimeline(def,inst,vo); else ddw.Symbol.drawSymbol(def,parent,vo);
+	}
+}
+ddw.Timeline.__super__ = ddw.Definition;
+ddw.Timeline.prototype = $extend(ddw.Definition.prototype,{
+	__class__: ddw.Timeline
+});
+ddw.VexObject = function() {
+	this.boxSize = 25;
+	this.gradientStart = 0;
+	this.fills = new Array();
+	this.strokes = new Array();
+	this.namedTimelines = new Hash();
+	this.definitions = new IntHash();
+};
+ddw.VexObject.__name__ = true;
+ddw.VexObject.prototype = {
+	drawTimeline: function(index,parent) {
+		var tlDef = this.definitions.get(index);
+		if(tlDef != null && js.Boot.__instanceof(tlDef,ddw.Timeline)) {
+			var tl = tlDef;
+			ddw.Timeline.drawTimeline(tl,null,this);
+		}
+	}
+	,parseVex: function(data) {
+		var i = 0;
+		while(i < data.strokes.length) {
+			var col = new ddw.Color(data.strokes[i + 1]);
+			var stroke = new ddw.Stroke(col,data.strokes[i]);
+			this.strokes.push(stroke);
+			i += 2;
+		}
+		var dom = js.Lib.document;
+		var cv = dom.createElement("canvas");
+		var g = cv.getContext("2d");
+		var dFills = data.fills;
+		var _g = 0;
+		while(_g < dFills.length) {
+			var dFill = dFills[_g];
+			++_g;
+			var f = ddw.Fill.parseVexFill(dFill,g);
+			this.fills.push(f);
+			if(!f.isGradient) this.gradientStart = i + 1;
+		}
+		var dSymbols = data.symbols;
+		var _g = 0;
+		while(_g < dSymbols.length) {
+			var dSymbol = dSymbols[_g];
+			++_g;
+			var symbol = ddw.Symbol.parseVex(dSymbol);
+			this.definitions.set(symbol.id,symbol);
+		}
+		var dTimelines = data.timelines;
+		var _g = 0;
+		while(_g < dTimelines.length) {
+			var dtl = dTimelines[_g];
+			++_g;
+			var tl = ddw.Timeline.parseVexData(dtl);
+			this.definitions.set(tl.id,tl);
+			if(tl.name != null) this.namedTimelines.set(tl.name,tl);
+		}
+	}
+	,transformObject: function(obj,instance,offsetX,offsetY) {
+		var orgTxt = offsetX + "px " + offsetY + "px";
+		obj.style.WebkitTransformOrigin = orgTxt;
+		obj.style.msTransformOrigin = orgTxt;
+		obj.style.OTransformOrigin = orgTxt;
+		obj.style.MozTransformOrigin = orgTxt;
+		var trans = "";
+		var orgX = instance.x - offsetX;
+		var orgY = instance.y - offsetY;
+		trans += "translate(" + orgX + "px," + orgY + "px)";
+		if(instance.hasShear) trans += "skewX(" + instance.shear + ") ";
+		if(instance.hasRotation) trans += "rotate(" + instance.rotation + "deg) ";
+		obj.style.WebkitTransform = trans;
+		obj.style.msTransform = trans;
+		obj.style.OTransform = trans;
+		obj.style.MozTransform = trans;
+	}
+	,createCanvas: function(width,height) {
+		var canvas = document.createElement("canvas");
+		canvas.width = width;
+		canvas.height = height;
+		document.body.appendChild(canvas);
+		return canvas;
+	}
+	,__class__: ddw.VexObject
+}
+var js = js || {}
+js.Boot = function() { }
+js.Boot.__name__ = true;
+js.Boot.__unhtml = function(s) {
+	return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;");
+}
+js.Boot.__trace = function(v,i) {
+	var msg = i != null?i.fileName + ":" + i.lineNumber + ": ":"";
+	msg += js.Boot.__string_rec(v,"");
+	var d;
+	if(typeof(document) != "undefined" && (d = document.getElementById("haxe:trace")) != null) d.innerHTML += js.Boot.__unhtml(msg) + "<br/>"; else if(typeof(console) != "undefined" && console.log != null) console.log(msg);
+}
+js.Boot.__clear_trace = function() {
+	var d = document.getElementById("haxe:trace");
+	if(d != null) d.innerHTML = "";
+}
+js.Boot.isClass = function(o) {
+	return o.__name__;
+}
+js.Boot.isEnum = function(e) {
+	return e.__ename__;
+}
+js.Boot.getClass = function(o) {
+	return o.__class__;
+}
+js.Boot.__string_rec = function(o,s) {
+	if(o == null) return "null";
+	if(s.length >= 5) return "<...>";
+	var t = typeof(o);
+	if(t == "function" && (o.__name__ || o.__ename__)) t = "object";
+	switch(t) {
+	case "object":
+		if(o instanceof Array) {
+			if(o.__enum__) {
+				if(o.length == 2) return o[0];
+				var str = o[0] + "(";
+				s += "\t";
+				var _g1 = 2, _g = o.length;
+				while(_g1 < _g) {
+					var i = _g1++;
+					if(i != 2) str += "," + js.Boot.__string_rec(o[i],s); else str += js.Boot.__string_rec(o[i],s);
+				}
+				return str + ")";
+			}
+			var l = o.length;
+			var i;
+			var str = "[";
+			s += "\t";
+			var _g = 0;
+			while(_g < l) {
+				var i1 = _g++;
+				str += (i1 > 0?",":"") + js.Boot.__string_rec(o[i1],s);
+			}
+			str += "]";
+			return str;
+		}
+		var tostr;
+		try {
+			tostr = o.toString;
+		} catch( e ) {
+			return "???";
+		}
+		if(tostr != null && tostr != Object.toString) {
+			var s2 = o.toString();
+			if(s2 != "[object Object]") return s2;
+		}
+		var k = null;
+		var str = "{\n";
+		s += "\t";
+		var hasp = o.hasOwnProperty != null;
+		for( var k in o ) { ;
+		if(hasp && !o.hasOwnProperty(k)) {
+			continue;
+		}
+		if(k == "prototype" || k == "__class__" || k == "__super__" || k == "__interfaces__" || k == "__properties__") {
+			continue;
+		}
+		if(str.length != 2) str += ", \n";
+		str += s + k + " : " + js.Boot.__string_rec(o[k],s);
+		}
+		s = s.substring(1);
+		str += "\n" + s + "}";
+		return str;
+	case "function":
+		return "<function>";
+	case "string":
+		return o;
+	default:
+		return String(o);
+	}
+}
+js.Boot.__interfLoop = function(cc,cl) {
+	if(cc == null) return false;
+	if(cc == cl) return true;
+	var intf = cc.__interfaces__;
+	if(intf != null) {
+		var _g1 = 0, _g = intf.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			var i1 = intf[i];
+			if(i1 == cl || js.Boot.__interfLoop(i1,cl)) return true;
+		}
+	}
+	return js.Boot.__interfLoop(cc.__super__,cl);
+}
+js.Boot.__instanceof = function(o,cl) {
+	try {
+		if(o instanceof cl) {
+			if(cl == Array) return o.__enum__ == null;
+			return true;
+		}
+		if(js.Boot.__interfLoop(o.__class__,cl)) return true;
+	} catch( e ) {
+		if(cl == null) return false;
+	}
+	switch(cl) {
+	case Int:
+		return Math.ceil(o%2147483648.0) === o;
+	case Float:
+		return typeof(o) == "number";
+	case Bool:
+		return o === true || o === false;
+	case String:
+		return typeof(o) == "string";
+	case Dynamic:
+		return true;
+	default:
+		if(o == null) return false;
+		if(cl == Class && o.__name__ != null) return true; else null;
+		if(cl == Enum && o.__ename__ != null) return true; else null;
+		return o.__enum__ == cl;
+	}
+}
+js.Boot.__cast = function(o,t) {
+	if(js.Boot.__instanceof(o,t)) return o; else throw "Cannot cast " + Std.string(o) + " to " + Std.string(t);
+}
+js.Lib = function() { }
+js.Lib.__name__ = true;
+js.Lib.debug = function() {
+	debugger;
+}
+js.Lib.alert = function(v) {
+	alert(js.Boot.__string_rec(v,""));
+}
+js.Lib.eval = function(code) {
+	return eval(code);
+}
+js.Lib.setErrorHandler = function(f) {
+	js.Lib.onerror = f;
+}
+if(Array.prototype.indexOf) HxOverrides.remove = function(a,o) {
+	var i = a.indexOf(o);
+	if(i == -1) return false;
+	a.splice(i,1);
+	return true;
+}; else null;
+Math.__name__ = ["Math"];
+Math.NaN = Number.NaN;
+Math.NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY;
+Math.POSITIVE_INFINITY = Number.POSITIVE_INFINITY;
+Math.isFinite = function(i) {
+	return isFinite(i);
+};
+Math.isNaN = function(i) {
+	return isNaN(i);
+};
+String.prototype.__class__ = String;
+String.__name__ = true;
+Array.prototype.__class__ = Array;
+Array.__name__ = true;
+Date.prototype.__class__ = Date;
+Date.__name__ = ["Date"];
+var Int = { __name__ : ["Int"]};
+var Dynamic = { __name__ : ["Dynamic"]};
+var Float = Number;
+Float.__name__ = ["Float"];
+var Bool = Boolean;
+Bool.__ename__ = ["Bool"];
+var Class = { __name__ : ["Class"]};
+var Enum = { };
+var Void = { __ename__ : ["Void"]};
+if(typeof document != "undefined") js.Lib.document = document;
+if(typeof window != "undefined") {
+	js.Lib.window = window;
+	js.Lib.window.onerror = function(msg,url,line) {
+		var f = js.Lib.onerror;
+		if(f == null) return false;
+		return f(msg,[url + ":" + line]);
+	};
+}
+Main.main();
