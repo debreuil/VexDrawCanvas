@@ -1,6 +1,6 @@
 package ddw;
-import js.CanvasContex;
-import js.HtmlCanvas;
+
+import HTML5Dom;
 
 class Symbol extends Definition
 {
@@ -43,9 +43,9 @@ class Symbol extends Definition
 		var offsetX:Float = -bnds.x * metrics.scaleX;
 		var offsetY:Float = -bnds.y * metrics.scaleY;
 		
-		var cv:HtmlCanvas = vo.createCanvas(metrics.name, cast (bnds.width * metrics.scaleX), cast (bnds.height * metrics.scaleY));
+		var cv:HTMLCanvasElement = vo.createCanvas(metrics.name, cast (bnds.width * metrics.scaleX), cast (bnds.height * metrics.scaleY));
 		//vo.transformObject(cv, metrics, offsetX, offsetY);			
-		var g:CanvasContex = cv.getContext("2d");	
+		var g:CanvasRenderingContext2D = cv.getContext("2d");	
 		
 		g.translate(offsetX, offsetY);
 		

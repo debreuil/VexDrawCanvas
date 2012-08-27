@@ -1,5 +1,6 @@
 package ddw;
 
+import HTML5Dom;
 import js.Dom;
 
 class Instance 
@@ -76,7 +77,7 @@ class Instance
 	public static function drawInstance(inst:Instance, vo:VexObject)
 	{				
 		var divClass:String = (inst.name == null || inst.name == "") ? "inst_" + inst.instanceId : inst.name;
-		var div:HtmlDom = vo.pushDiv(divClass);	
+		var div:HTMLDivElement = vo.pushDiv(divClass);	
 		var offsetX:Float = 0;
 		var offsetY:Float = 0;
 				

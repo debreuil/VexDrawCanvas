@@ -25,10 +25,11 @@ Swf > It3rate > Canvas - Test
 function render()
 {
 	var vo = new ddw.VexObject();
-	vo.parseVex(data);
+	vo.parseVex(data);	
+	vo.drawColorTables();
+	//vo.drawTimeline(1, null);
 	
-	//vo.drawColorTables();
-	vo.drawTimeline(1, null);
+	vo.loadBinaryFile("testData.dat");
 }
 
 </script>

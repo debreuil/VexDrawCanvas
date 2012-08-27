@@ -1,9 +1,7 @@
 package ddw;
 import haxe.Stack;
-import js.CanvasContex;
-import js.Dom;
-import js.HtmlCanvas;
 import js.Lib;
+import HTML5Dom;
 
 class VexObject 
 {
@@ -28,9 +26,27 @@ class VexObject
 		this.timelineStack.push(untyped document.body);
 	}	
 	
-	public function pushDiv(id:String):HtmlDom
+	
+	public function loadBinaryFile(path:String)
+	{		
+		var xhr:XMLHttpRequest = untyped __new__("XMLHttpRequest");
+		xhr.open('GET', path, true);
+		xhr.responseType = 'arraybuffer';
+
+		xhr.onload = function(e:Dynamic):Void
+		{
+			if (xhr.readyState == 4)
+			{
+				var u8Array = new Uint8Array(xhr.response);
+				Lib.alert(u8Array[1]);
+			}
+		}
+		xhr.send();
+	}
+	
+	public function pushDiv(id:String):HTMLDivElement
 	{
-		var div:HtmlDom = untyped document.createElement('div');
+		var div:HTMLDivElement = cast Lib.document.createElement('div');
 		div.id = id;	
 		
 		untyped timelineStack[0].appendChild(div);
@@ -43,9 +59,9 @@ class VexObject
 		timelineStack.shift();
 	}
 	
-	public function createCanvas(id:String, width:Int, height:Int):HtmlCanvas
+	public function createCanvas(id:String, width:Int, height:Int):HTMLCanvasElement
 	{
-		var canvas:HtmlCanvas = untyped document.createElement('canvas');
+		var canvas:HTMLCanvasElement = untyped document.createElement('canvas');
 		canvas.id = id;
 		canvas.width = width;
 		canvas.height = height;	
@@ -54,7 +70,7 @@ class VexObject
 		return canvas;
 	}
 	
-	public function transformObject(obj:HtmlDom, instance:Instance, offsetX:Float, offsetY:Float) 
+	public function transformObject(obj:Element, instance:Instance, offsetX:Float, offsetY:Float) 
 	{	
 		if (instance.x != 0 || instance.y != 0 || offsetX != 0 || offsetY != 0)
 		{
@@ -102,9 +118,8 @@ class VexObject
 		}
 		
 		// fills
-		var dom:Document = Lib.document;
-		var cv:HtmlCanvas = cast dom.createElement('canvas');
-		var g:CanvasContex = cv.getContext("2d");		
+		var cv:HTMLCanvasElement = cast Lib.document.createElement('canvas');
+		var g:CanvasRenderingContext2D = cv.getContext("2d");		
 		var dFills:Array<Dynamic> = cast data.fills;
 		for(dFill in dFills)
 		{
@@ -162,10 +177,10 @@ class VexObject
 		var i:Int = 0;
 		for(stroke in strokes)
 		{
-			var cv:HtmlCanvas = createCanvas("st_" + stroke.lineWidth + "_" + stroke.color.getColorHex(), boxSize, boxSize);
+			var cv:HTMLCanvasElement = createCanvas("st_" + stroke.lineWidth + "_" + stroke.color.getColorHex(), boxSize, boxSize);
 			inst.x = (boxSize + 2) * i++;
 			transformObject(cv, inst, 0, 0);	
-			var g:CanvasContex = cv.getContext("2d");
+			var g:CanvasRenderingContext2D = cv.getContext("2d");
 			
 			g.fillStyle =  fills[0];
 			g.lineWidth = stroke.lineWidth;
@@ -182,9 +197,9 @@ class VexObject
 			inst.x = fill.isGradient ? (boxSize + 2) * gradCount++ : (boxSize + 2) * solidCount++;
 			inst.y = fill.isGradient ? 100 : 70;
 			
-			var cv:HtmlCanvas = createCanvas(id, boxSize, boxSize);				
+			var cv:HTMLCanvasElement = createCanvas(id, boxSize, boxSize);				
 			transformObject(cv, inst, 0, 0);	
-			var g:CanvasContex = cv.getContext("2d");
+			var g:CanvasRenderingContext2D = cv.getContext("2d");
 			g.fillStyle = fill.canvasFill;
 			g.fillRect(0, 0, boxSize, boxSize);				
 		}

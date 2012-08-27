@@ -1,5 +1,6 @@
 package ddw;
-import js.CanvasContex;
+
+import HTML5Dom;
 
 class Fill 
 {
@@ -13,7 +14,7 @@ class Fill
 	{		
 	}
 	
-	public static function parseVexFill(fill:Dynamic, g:CanvasContex):Fill
+	public static function parseVexFill(fill:Dynamic, g:CanvasRenderingContext2D):Fill
 	{		
 		var result:Fill = new Fill();
 		

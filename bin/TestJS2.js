@@ -4,6 +4,18 @@ function $extend(from, fields) {
 	for (var name in fields) proto[name] = fields[name];
 	return proto;
 }
+var Selection = function() { }
+Selection.__name__ = true;
+Selection.prototype = {
+	__class__: Selection
+}
+var MessagePortArray = function() { }
+MessagePortArray.__name__ = true;
+var MessagePort = function() { }
+MessagePort.__name__ = true;
+MessagePort.prototype = {
+	__class__: MessagePort
+}
 var Hash = function() {
 	this.h = { };
 };
@@ -669,8 +681,7 @@ ddw.VexObject.prototype = {
 			this.strokes.push(stroke);
 			i += 2;
 		}
-		var dom = js.Lib.document;
-		var cv = dom.createElement("canvas");
+		var cv = js.Lib.document.createElement("canvas");
 		var g = cv.getContext("2d");
 		var dFills = data.fills;
 		var _g = 0;
@@ -730,11 +741,23 @@ ddw.VexObject.prototype = {
 		this.timelineStack.shift();
 	}
 	,pushDiv: function(id) {
-		var div = document.createElement("div");
+		var div = js.Lib.document.createElement("div");
 		div.id = id;
 		this.timelineStack[0].appendChild(div);
 		this.timelineStack.unshift(div);
 		return div;
+	}
+	,loadBinaryFile: function(path) {
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET",path,true);
+		xhr.responseType = "arraybuffer";
+		xhr.onload = function(e) {
+			if(xhr.readyState == 4) {
+				var u8Array = new Uint8Array(xhr.response);
+				js.Lib.alert(u8Array[1]);
+			}
+		};
+		xhr.send();
 	}
 	,__class__: ddw.VexObject
 }

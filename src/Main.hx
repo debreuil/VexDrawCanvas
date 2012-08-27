@@ -1,11 +1,9 @@
 import ddw.VexObject;
-import js.HtmlCanvas;
 import js.Lib;
 
 class Main 
 {
 	public static var vo:VexObject;
-	public static var canvas:HtmlCanvas;
 	
     static function main() 
 	{
@@ -13,4 +11,5 @@ class Main
 		//vo = new VexObject();
 		//canvas = vo.createCanvas(50, 50);
     }
+	
 }
