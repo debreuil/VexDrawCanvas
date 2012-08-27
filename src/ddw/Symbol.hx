@@ -5,7 +5,7 @@ import js.HtmlCanvas;
 class Symbol extends Definition
 {
 	public var shapes:Array<Shape>;
-	
+		
 	public function new() 
 	{		
 		super();
@@ -43,8 +43,8 @@ class Symbol extends Definition
 		var offsetX:Float = -bnds.x * metrics.scaleX;
 		var offsetY:Float = -bnds.y * metrics.scaleY;
 		
-		var cv:HtmlCanvas = vo.createCanvas(cast (bnds.width * metrics.scaleX), cast (bnds.height * metrics.scaleY));
-		vo.transformObject(cv, metrics, offsetX, offsetY);			
+		var cv:HtmlCanvas = vo.createCanvas(metrics.name, cast (bnds.width * metrics.scaleX), cast (bnds.height * metrics.scaleY));
+		//vo.transformObject(cv, metrics, offsetX, offsetY);			
 		var g:CanvasContex = cv.getContext("2d");	
 		
 		g.translate(offsetX, offsetY);

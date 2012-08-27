@@ -1,4 +1,5 @@
 package ddw;
+import haxe.Stack;
 import js.CanvasContex;
 import js.Dom;
 import js.HtmlCanvas;
@@ -14,6 +15,7 @@ class VexObject
 	
 	var gradientStart:Int = 0;
 	var boxSize:Int = 25;
+	private var timelineStack:Array<Dynamic>;
 
 	public function new() 
 	{	
@@ -21,47 +23,70 @@ class VexObject
 		this.strokes = new Array<Stroke>();
 		this.namedTimelines = new Hash<Timeline>();
 		this.definitions = new IntHash<Definition>();
+		
+		this.timelineStack = new Array<Dynamic>();
+		this.timelineStack.push(untyped document.body);
 	}	
 	
-	public function createCanvas(width, height):HtmlCanvas
+	public function pushDiv(id:String):HtmlDom
+	{
+		var div:HtmlDom = untyped document.createElement('div');
+		div.id = id;	
+		
+		untyped timelineStack[0].appendChild(div);
+		timelineStack.unshift(div);
+		
+		return div;
+	}
+	public function popDiv():Void
+	{
+		timelineStack.shift();
+	}
+	
+	public function createCanvas(id:String, width:Int, height:Int):HtmlCanvas
 	{
 		var canvas:HtmlCanvas = untyped document.createElement('canvas');
+		canvas.id = id;
 		canvas.width = width;
 		canvas.height = height;	
-		untyped document.body.appendChild(canvas);		
+		
+		untyped timelineStack[0].appendChild(canvas);		
 		return canvas;
 	}
 	
-	public function transformObject(obj:HtmlCanvas, instance:Instance, offsetX:Float, offsetY:Float) 
+	public function transformObject(obj:HtmlDom, instance:Instance, offsetX:Float, offsetY:Float) 
 	{	
-		var orgTxt:String = offsetX + "px " + offsetY + "px";
-		untyped obj.style["WebkitTransformOrigin"] = orgTxt;
-		untyped obj.style["msTransformOrigin"] = orgTxt;
-		untyped obj.style["OTransformOrigin"] = orgTxt;
-		untyped obj.style["MozTransformOrigin"] = orgTxt;
+		if (instance.x != 0 || instance.y != 0 || offsetX != 0 || offsetY != 0)
+		{
+			var orgTxt:String = offsetX + "px " + offsetY + "px";
+			untyped obj.style["WebkitTransformOrigin"] = orgTxt;
+			untyped obj.style["msTransformOrigin"] = orgTxt;
+			untyped obj.style["OTransformOrigin"] = orgTxt;
+			untyped obj.style["MozTransformOrigin"] = orgTxt;
+				
+			var trans:String = "";			
+			var orgX:Float = instance.x - offsetX;
+			var orgY:Float = instance.y - offsetY;
+			trans += "translate(" + orgX + "px," + orgY + "px)";
 			
-		var trans:String = "";			
-		var orgX:Float = instance.x - offsetX;
-		var orgY:Float = instance.y - offsetY;
-		trans += "translate(" + orgX + "px," + orgY + "px)";
-		
-		if(instance.hasShear)
-		{
-			trans += "skewX(" + instance.shear + ") ";
-		}	
-		if(instance.hasRotation)
-		{
-			trans += "rotate(" + instance.rotation + "deg) ";
-		}	
-		//if(instance.hasScale)
-		//{
-		//	trans += "scale(" + instance.scaleX + "," + instance.scaleY + ") ";
-		//}	
+			if(instance.hasShear)
+			{
+				trans += "skewX(" + instance.shear + ") ";
+			}	
+			if(instance.hasRotation)
+			{
+				trans += "rotate(" + instance.rotation + "deg) ";
+			}	
+			//if(instance.hasScale)
+			//{
+			//	trans += "scale(" + instance.scaleX + "," + instance.scaleY + ") ";
+			//}	
 
-		untyped obj.style["WebkitTransform"] = trans;
-		untyped obj.style["msTransform"] = trans;
-		untyped obj.style["OTransform"] = trans;	
-		untyped obj.style['MozTransform'] = trans;
+			untyped obj.style["WebkitTransform"] = trans;
+			untyped obj.style["msTransform"] = trans;
+			untyped obj.style["OTransform"] = trans;	
+			untyped obj.style['MozTransform'] = trans;
+		}
 	}
 	
 	public function parseVex(data:Dynamic)
@@ -116,7 +141,7 @@ class VexObject
 		}
 	}
 
-	public function drawTimeline(index:Int, parent:Instance)
+	public function drawTimeline(index:Int)
 	{	
 		//Timeline: id,name,bounds,instances
 		//		instance:defId,x,y,scaleX,scaleY,rotation,shear,name
@@ -124,8 +149,64 @@ class VexObject
 		if(tlDef != null && Std.is(tlDef, Timeline))
 		{
 			var tl:Timeline = cast tlDef;
-			Timeline.drawTimeline(tl, null, this);
+			Timeline.drawTimeline(tl, this);
 		}
+	}
+	
+	
+	public function drawColorTables()
+	{	
+		var inst:Instance = new Instance(0);
+		inst.y = 40;
+		
+		var i:Int = 0;
+		for(stroke in strokes)
+		{
+			var cv:HtmlCanvas = createCanvas("st_" + stroke.lineWidth + "_" + stroke.color.getColorHex(), boxSize, boxSize);
+			inst.x = (boxSize + 2) * i++;
+			transformObject(cv, inst, 0, 0);	
+			var g:CanvasContex = cv.getContext("2d");
+			
+			g.fillStyle =  fills[0];
+			g.lineWidth = stroke.lineWidth;
+			g.strokeStyle =  stroke.color.colorString;
+			g.strokeRect(0, 0, boxSize, boxSize);	
+		}
+		
+		i = 0;
+		var solidCount = 0;
+		var gradCount = 0;
+		for(fill in fills)
+		{
+			var id:String = fill.isGradient ? "grad_" + gradCount : "sf_" + fill.color.getColorHex();
+			inst.x = fill.isGradient ? (boxSize + 2) * gradCount++ : (boxSize + 2) * solidCount++;
+			inst.y = fill.isGradient ? 100 : 70;
+			
+			var cv:HtmlCanvas = createCanvas(id, boxSize, boxSize);				
+			transformObject(cv, inst, 0, 0);	
+			var g:CanvasContex = cv.getContext("2d");
+			g.fillStyle = fill.canvasFill;
+			g.fillRect(0, 0, boxSize, boxSize);				
+		}
+		//for(var i = 0; i < fills.length; i++)
+		//{
+			//if(i < gradientStart)
+			//{
+				//var cv = createContext(boxSize, boxSize);
+				//var g = cv.getContext("2d");			
+				//g.fillStyle = fills[i];
+				//g.fillRect(0, 0, boxSize, boxSize);			
+				//transformObject(cv,{x:(boxSize + 2) * i, y:70}, 0, 0);
+			//}
+			//else
+			//{
+				//var cv = createContext(boxSize, boxSize);
+				//var g = cv.getContext("2d");
+				//g.fillStyle = fills[i];
+				//g.fillRect(0, 0, boxSize, boxSize);
+				//transformObject(cv, {x:(boxSize + 2) * (i - gradientStart + 1), y:100}, 0, 0);
+			//}
+		//}
 	}
 	
 }

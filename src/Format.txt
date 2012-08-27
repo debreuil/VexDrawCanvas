@@ -1,0 +1,39 @@
+// this is the json format for raw vex info coming from It3rate
+
+{
+	// strokes start with a 0,0 empty stroke
+	"strokes":[lineWidth:int,color:int,lineWidth:int,color:int...],
+	
+	// fills start with 'noFill'. They are sorted solid fills first, then gradients.
+	"fills":
+	[
+		color:int,color:int...  // solid fills
+		["L|R":string,[topLeftX:float,topLeftY:float,topRightX:float,topRightY:float], [color:int,stop:float,color:int,stop.float...]]... // gradients
+	],
+	
+	"symbols":[
+	{
+		"id":int,"name":string,"bounds":[topLeft:float,topRight:float,width:float,height:float],
+		"shapes":
+		[
+			[strokeIndex:int, fillIndex:int, path:svgString]... // as many strokes as needed, always use abs paths
+		]
+	},
+	
+	// instances can optionally have transform info
+	"timelines":
+	[
+		{
+			"id":int,"name":string,"bounds":[topLeft:float,topRight:float,width:float,height:float],
+			"instances":
+			[
+				[definitionId:int,[x:float,y:float]],
+				[definitionId:int,[x:float,y:float],[scaleX:float,scaleY:float]],
+				[definitionId:int,[x:float,y:float],[scaleX:float,scaleY:float,rotation:float]],
+				[definitionId:int,[x:float,y:float],[scaleX:float,scaleY:float,rotation:float,xShaer:float]]...
+			]
+		}
+	]
+}
+	
+	

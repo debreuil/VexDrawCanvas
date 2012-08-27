@@ -230,6 +230,92 @@ StringBuf.prototype = {
 	}
 	,__class__: StringBuf
 }
+var StringTools = function() { }
+StringTools.__name__ = true;
+StringTools.urlEncode = function(s) {
+	return encodeURIComponent(s);
+}
+StringTools.urlDecode = function(s) {
+	return decodeURIComponent(s.split("+").join(" "));
+}
+StringTools.htmlEscape = function(s) {
+	return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;");
+}
+StringTools.htmlUnescape = function(s) {
+	return s.split("&gt;").join(">").split("&lt;").join("<").split("&amp;").join("&");
+}
+StringTools.startsWith = function(s,start) {
+	return s.length >= start.length && HxOverrides.substr(s,0,start.length) == start;
+}
+StringTools.endsWith = function(s,end) {
+	var elen = end.length;
+	var slen = s.length;
+	return slen >= elen && HxOverrides.substr(s,slen - elen,elen) == end;
+}
+StringTools.isSpace = function(s,pos) {
+	var c = HxOverrides.cca(s,pos);
+	return c >= 9 && c <= 13 || c == 32;
+}
+StringTools.ltrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,r)) r++;
+	if(r > 0) return HxOverrides.substr(s,r,l - r); else return s;
+}
+StringTools.rtrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,l - r - 1)) r++;
+	if(r > 0) return HxOverrides.substr(s,0,l - r); else return s;
+}
+StringTools.trim = function(s) {
+	return StringTools.ltrim(StringTools.rtrim(s));
+}
+StringTools.rpad = function(s,c,l) {
+	var sl = s.length;
+	var cl = c.length;
+	while(sl < l) if(l - sl < cl) {
+		s += HxOverrides.substr(c,0,l - sl);
+		sl = l;
+	} else {
+		s += c;
+		sl += cl;
+	}
+	return s;
+}
+StringTools.lpad = function(s,c,l) {
+	var ns = "";
+	var sl = s.length;
+	if(sl >= l) return s;
+	var cl = c.length;
+	while(sl < l) if(l - sl < cl) {
+		ns += HxOverrides.substr(c,0,l - sl);
+		sl = l;
+	} else {
+		ns += c;
+		sl += cl;
+	}
+	return ns + s;
+}
+StringTools.replace = function(s,sub,by) {
+	return s.split(sub).join(by);
+}
+StringTools.hex = function(n,digits) {
+	var s = "";
+	var hexChars = "0123456789ABCDEF";
+	do {
+		s = hexChars.charAt(n & 15) + s;
+		n >>>= 4;
+	} while(n > 0);
+	if(digits != null) while(s.length < digits) s = "0" + s;
+	return s;
+}
+StringTools.fastCodeAt = function(s,index) {
+	return s.charCodeAt(index);
+}
+StringTools.isEOF = function(c) {
+	return c != c;
+}
 var ddw = ddw || {}
 ddw.Color = function(argb) {
 	this.argb = argb;
@@ -238,7 +324,7 @@ ddw.Color = function(argb) {
 ddw.Color.__name__ = true;
 ddw.Color.getColorString = function(value) {
 	var result;
-	var a = (value & -16777216) >>> 24;
+	var a = 255 - ((value & -16777216) >>> 24);
 	var r = (value & 16711680) >>> 16;
 	var g = (value & 65280) >>> 8;
 	var b = value & 255;
@@ -247,7 +333,16 @@ ddw.Color.getColorString = function(value) {
 	return result;
 }
 ddw.Color.prototype = {
-	__class__: ddw.Color
+	getColorHex: function() {
+		var result;
+		var a = 255 - ((this.argb & -16777216) >>> 24);
+		var r = (this.argb & 16711680) >>> 16;
+		var g = (this.argb & 65280) >>> 8;
+		var b = this.argb & 255;
+		result = StringTools.hex(a) + "" + StringTools.hex(r) + "" + StringTools.hex(g) + "" + StringTools.hex(b);
+		return result;
+	}
+	,__class__: ddw.Color
 }
 ddw.Definition = function() {
 };
@@ -293,7 +388,8 @@ ddw.Instance = function(defId) {
 	this.scaleX = 1;
 	this.y = 0;
 	this.x = 0;
-	this.defId = defId;
+	this.definitionId = defId;
+	this.instanceId = ddw.Instance.instanceCounter++;
 };
 ddw.Instance.__name__ = true;
 ddw.Instance.parseVexData = function(dinst) {
@@ -314,8 +410,27 @@ ddw.Instance.parseVexData = function(dinst) {
 			result.hasShear = true;
 		}
 	}
-	if(dinst.length > 3) result.name = dinst[3]; else if(dinst.length > 2 && js.Boot.__instanceof(dinst[2],String)) result.name = dinst[2]; else result.name = "";
+	if(dinst.length > 3) result.name = dinst[3]; else if(dinst.length > 2 && js.Boot.__instanceof(dinst[2],String)) result.name = dinst[2]; else result.name = "inst_" + result.instanceId;
 	return result;
+}
+ddw.Instance.drawInstance = function(inst,vo) {
+	var divClass = inst.name == null || inst.name == ""?"inst_" + inst.instanceId:inst.name;
+	var div = vo.pushDiv(divClass);
+	var offsetX = 0;
+	var offsetY = 0;
+	var def = vo.definitions.get(inst.definitionId);
+	if(def.isTimeline) {
+		var tl = js.Boot.__cast(def , ddw.Timeline);
+		if(tl.instances.length > 1 || tl.instances.length == 1 && js.Boot.__instanceof(tl.instances[0],ddw.Timeline)) ddw.Timeline.drawTimeline(js.Boot.__cast(def , ddw.Timeline),vo); else {
+			var symbol = js.Boot.__cast(vo.definitions.get(tl.instances[0].definitionId) , ddw.Symbol);
+			var bnds = symbol.bounds;
+			offsetX = -bnds.x * inst.scaleX;
+			offsetY = -bnds.y * inst.scaleY;
+			ddw.Symbol.drawSymbol(symbol,inst,vo);
+		}
+	} else ddw.Symbol.drawSymbol(js.Boot.__cast(def , ddw.Symbol),inst,vo);
+	vo.transformObject(div,inst,offsetX,offsetY);
+	vo.popDiv();
 }
 ddw.Instance.prototype = {
 	__class__: ddw.Instance
@@ -421,8 +536,7 @@ ddw.Symbol.drawSymbol = function(symbol,metrics,vo) {
 	var bnds = symbol.bounds;
 	var offsetX = -bnds.x * metrics.scaleX;
 	var offsetY = -bnds.y * metrics.scaleY;
-	var cv = vo.createCanvas(bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
-	vo.transformObject(cv,metrics,offsetX,offsetY);
+	var cv = vo.createCanvas(metrics.name,bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
 	var g = cv.getContext("2d");
 	g.translate(offsetX,offsetY);
 	if(metrics.hasScale) g.scale(metrics.scaleX,metrics.scaleY);
@@ -482,16 +596,12 @@ ddw.Timeline.parseVexData = function(dtl) {
 	}
 	return result;
 }
-ddw.Timeline.drawTimeline = function(tl,parent,vo) {
-	var bnds = tl.bounds;
-	var offsetX = -bnds.x;
-	var offsetY = -bnds.y;
+ddw.Timeline.drawTimeline = function(tl,vo) {
 	var _g = 0, _g1 = tl.instances;
 	while(_g < _g1.length) {
 		var inst = _g1[_g];
 		++_g;
-		var def = vo.definitions.get(inst.defId);
-		if(def.isTimeline) ddw.Timeline.drawTimeline(def,inst,vo); else ddw.Symbol.drawSymbol(def,parent,vo);
+		ddw.Instance.drawInstance(inst,vo);
 	}
 }
 ddw.Timeline.__super__ = ddw.Definition;
@@ -505,14 +615,50 @@ ddw.VexObject = function() {
 	this.strokes = new Array();
 	this.namedTimelines = new Hash();
 	this.definitions = new IntHash();
+	this.timelineStack = new Array();
+	this.timelineStack.push(document.body);
 };
 ddw.VexObject.__name__ = true;
 ddw.VexObject.prototype = {
-	drawTimeline: function(index,parent) {
+	drawColorTables: function() {
+		var inst = new ddw.Instance(0);
+		inst.y = 40;
+		var i = 0;
+		var _g = 0, _g1 = this.strokes;
+		while(_g < _g1.length) {
+			var stroke = _g1[_g];
+			++_g;
+			var cv = this.createCanvas("st_" + stroke.lineWidth + "_" + stroke.color.getColorHex(),this.boxSize,this.boxSize);
+			inst.x = (this.boxSize + 2) * i++;
+			this.transformObject(cv,inst,0,0);
+			var g = cv.getContext("2d");
+			g.fillStyle = this.fills[0];
+			g.lineWidth = stroke.lineWidth;
+			g.strokeStyle = stroke.color.colorString;
+			g.strokeRect(0,0,this.boxSize,this.boxSize);
+		}
+		i = 0;
+		var solidCount = 0;
+		var gradCount = 0;
+		var _g = 0, _g1 = this.fills;
+		while(_g < _g1.length) {
+			var fill = _g1[_g];
+			++_g;
+			var id = fill.isGradient?"grad_" + gradCount:"sf_" + fill.color.getColorHex();
+			inst.x = fill.isGradient?(this.boxSize + 2) * gradCount++:(this.boxSize + 2) * solidCount++;
+			inst.y = fill.isGradient?100:70;
+			var cv = this.createCanvas(id,this.boxSize,this.boxSize);
+			this.transformObject(cv,inst,0,0);
+			var g = cv.getContext("2d");
+			g.fillStyle = fill.canvasFill;
+			g.fillRect(0,0,this.boxSize,this.boxSize);
+		}
+	}
+	,drawTimeline: function(index) {
 		var tlDef = this.definitions.get(index);
 		if(tlDef != null && js.Boot.__instanceof(tlDef,ddw.Timeline)) {
 			var tl = tlDef;
-			ddw.Timeline.drawTimeline(tl,null,this);
+			ddw.Timeline.drawTimeline(tl,this);
 		}
 	}
 	,parseVex: function(data) {
@@ -554,30 +700,143 @@ ddw.VexObject.prototype = {
 		}
 	}
 	,transformObject: function(obj,instance,offsetX,offsetY) {
-		var orgTxt = offsetX + "px " + offsetY + "px";
-		obj.style.WebkitTransformOrigin = orgTxt;
-		obj.style.msTransformOrigin = orgTxt;
-		obj.style.OTransformOrigin = orgTxt;
-		obj.style.MozTransformOrigin = orgTxt;
-		var trans = "";
-		var orgX = instance.x - offsetX;
-		var orgY = instance.y - offsetY;
-		trans += "translate(" + orgX + "px," + orgY + "px)";
-		if(instance.hasShear) trans += "skewX(" + instance.shear + ") ";
-		if(instance.hasRotation) trans += "rotate(" + instance.rotation + "deg) ";
-		obj.style.WebkitTransform = trans;
-		obj.style.msTransform = trans;
-		obj.style.OTransform = trans;
-		obj.style.MozTransform = trans;
+		if(instance.x != 0 || instance.y != 0 || offsetX != 0 || offsetY != 0) {
+			var orgTxt = offsetX + "px " + offsetY + "px";
+			obj.style.WebkitTransformOrigin = orgTxt;
+			obj.style.msTransformOrigin = orgTxt;
+			obj.style.OTransformOrigin = orgTxt;
+			obj.style.MozTransformOrigin = orgTxt;
+			var trans = "";
+			var orgX = instance.x - offsetX;
+			var orgY = instance.y - offsetY;
+			trans += "translate(" + orgX + "px," + orgY + "px)";
+			if(instance.hasShear) trans += "skewX(" + instance.shear + ") ";
+			if(instance.hasRotation) trans += "rotate(" + instance.rotation + "deg) ";
+			obj.style.WebkitTransform = trans;
+			obj.style.msTransform = trans;
+			obj.style.OTransform = trans;
+			obj.style.MozTransform = trans;
+		}
 	}
-	,createCanvas: function(width,height) {
+	,createCanvas: function(id,width,height) {
 		var canvas = document.createElement("canvas");
+		canvas.id = id;
 		canvas.width = width;
 		canvas.height = height;
-		document.body.appendChild(canvas);
+		this.timelineStack[0].appendChild(canvas);
 		return canvas;
 	}
+	,popDiv: function() {
+		this.timelineStack.shift();
+	}
+	,pushDiv: function(id) {
+		var div = document.createElement("div");
+		div.id = id;
+		this.timelineStack[0].appendChild(div);
+		this.timelineStack.unshift(div);
+		return div;
+	}
 	,__class__: ddw.VexObject
+}
+var haxe = haxe || {}
+haxe.StackItem = { __ename__ : true, __constructs__ : ["CFunction","Module","FilePos","Method","Lambda"] }
+haxe.StackItem.CFunction = ["CFunction",0];
+haxe.StackItem.CFunction.toString = $estr;
+haxe.StackItem.CFunction.__enum__ = haxe.StackItem;
+haxe.StackItem.Module = function(m) { var $x = ["Module",1,m]; $x.__enum__ = haxe.StackItem; $x.toString = $estr; return $x; }
+haxe.StackItem.FilePos = function(s,file,line) { var $x = ["FilePos",2,s,file,line]; $x.__enum__ = haxe.StackItem; $x.toString = $estr; return $x; }
+haxe.StackItem.Method = function(classname,method) { var $x = ["Method",3,classname,method]; $x.__enum__ = haxe.StackItem; $x.toString = $estr; return $x; }
+haxe.StackItem.Lambda = function(v) { var $x = ["Lambda",4,v]; $x.__enum__ = haxe.StackItem; $x.toString = $estr; return $x; }
+haxe.Stack = function() { }
+haxe.Stack.__name__ = true;
+haxe.Stack.callStack = function() {
+	var oldValue = Error.prepareStackTrace;
+	Error.prepareStackTrace = function(error,callsites) {
+		var stack = [];
+		var _g = 0;
+		while(_g < callsites.length) {
+			var site = callsites[_g];
+			++_g;
+			var method = null;
+			var fullName = site.getFunctionName();
+			if(fullName != null) {
+				var idx = fullName.lastIndexOf(".");
+				if(idx >= 0) {
+					var className = HxOverrides.substr(fullName,0,idx);
+					var methodName = HxOverrides.substr(fullName,idx + 1,null);
+					method = haxe.StackItem.Method(className,methodName);
+				}
+			}
+			stack.push(haxe.StackItem.FilePos(method,site.getFileName(),site.getLineNumber()));
+		}
+		return stack;
+	};
+	var a = haxe.Stack.makeStack(new Error().stack);
+	a.shift();
+	Error.prepareStackTrace = oldValue;
+	return a;
+}
+haxe.Stack.exceptionStack = function() {
+	return [];
+}
+haxe.Stack.toString = function(stack) {
+	var b = new StringBuf();
+	var _g = 0;
+	while(_g < stack.length) {
+		var s = stack[_g];
+		++_g;
+		b.b += Std.string("\nCalled from ");
+		haxe.Stack.itemToString(b,s);
+	}
+	return b.b;
+}
+haxe.Stack.itemToString = function(b,s) {
+	var $e = (s);
+	switch( $e[1] ) {
+	case 0:
+		b.b += Std.string("a C function");
+		break;
+	case 1:
+		var m = $e[2];
+		b.b += Std.string("module ");
+		b.b += Std.string(m);
+		break;
+	case 2:
+		var line = $e[4], file = $e[3], s1 = $e[2];
+		if(s1 != null) {
+			haxe.Stack.itemToString(b,s1);
+			b.b += Std.string(" (");
+		}
+		b.b += Std.string(file);
+		b.b += Std.string(" line ");
+		b.b += Std.string(line);
+		if(s1 != null) b.b += Std.string(")");
+		break;
+	case 3:
+		var meth = $e[3], cname = $e[2];
+		b.b += Std.string(cname);
+		b.b += Std.string(".");
+		b.b += Std.string(meth);
+		break;
+	case 4:
+		var n = $e[2];
+		b.b += Std.string("local function #");
+		b.b += Std.string(n);
+		break;
+	}
+}
+haxe.Stack.makeStack = function(s) {
+	if(typeof(s) == "string") {
+		var stack = s.split("\n");
+		var m = [];
+		var _g = 0;
+		while(_g < stack.length) {
+			var line = stack[_g];
+			++_g;
+			m.push(haxe.StackItem.Module(line));
+		}
+		return m;
+	} else return s;
 }
 var js = js || {}
 js.Boot = function() { }
@@ -769,4 +1028,5 @@ if(typeof window != "undefined") {
 		return f(msg,[url + ":" + line]);
 	};
 }
+ddw.Instance.instanceCounter = 0;
 Main.main();

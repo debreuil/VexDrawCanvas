@@ -6,7 +6,7 @@ class Fill
 	public var isGradient:Bool;
 	public var canvasFill:Dynamic;
 	
-	private var color:Color;
+	public var color:Color;
 	private var gradient:CanvasGradient;
 	
 	public function new() 
