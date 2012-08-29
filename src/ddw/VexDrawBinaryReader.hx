@@ -11,6 +11,10 @@ class VexDrawBinaryReader
 	private var index:Int;
 	private var bit:Int;
 	
+	private var fillIndexNBits:Int;
+	private var strokeIndexNBits:Int;
+	
+	private var twips:Int = 20;
 	private var maskArray:Array<Int>;
 		
 	public function new(path:String, vo:VexObject)
@@ -48,7 +52,68 @@ class VexDrawBinaryReader
 		var gradientTag:Int = readByte();			
 		parseGradientFills(vo);
 		
+		var symbolDefTag:Int = readByte();	
+		var symbol:Symbol = parseSymbol(vo);
+		vo.definitions.set(symbol.id, symbol);
+		
 	}
+	
+	private function parseSymbol(vo:VexObject):Symbol
+	{	
+		var result:Symbol = new Symbol();
+		result.id = readNBits(32);
+		
+		// todo: name
+				
+		var bx:Float = readNBitInt(32) / twips;
+		var by:Float = readNBitInt(32) / twips;
+		var bw:Float = readNBitInt(32) / twips;
+		var bh:Float = readNBitInt(32) / twips;
+		result.bounds = new Rectangle(bx, by, bw, bh);
+		
+		var shapesCount:Int = readNBits(11);	
+		for (i in 0...shapesCount)
+		{
+			var strokeIndex:Int = readNBits(strokeIndexNBits);	
+			var fillIndex:Int = readNBits(fillIndexNBits);		
+			var shape:Shape = new Shape(strokeIndexNBits, fillIndexNBits);
+			
+			var nBits:Int = readNBitValue();
+			var segmentCount:Int = readNBits(11);			
+			for (j in 0...segmentCount)
+			{
+				var seg:Segment = new Segment();
+				var segType:Int = readNBits(2);		
+				seg.points.push(readNBitInt(nBits) / twips);		
+				seg.points.push(readNBitInt(nBits) / twips);	
+				
+				switch(segType)
+				{
+					case 0:
+						seg.segmentType = SegmentType.moveTo;
+					case 1:
+						seg.segmentType = SegmentType.lineTo;
+					case 2:
+						seg.segmentType = SegmentType.quadraticCurveTo;
+						seg.points.push(readNBitInt(nBits) / twips);		
+						seg.points.push(readNBitInt(nBits) / twips);
+					case 3:
+						seg.segmentType = SegmentType.bezierCurveTo;
+						seg.points.push(readNBitInt(nBits) / twips);		
+						seg.points.push(readNBitInt(nBits) / twips);
+						seg.points.push(readNBitInt(nBits) / twips);		
+						seg.points.push(readNBitInt(nBits) / twips);
+				}
+				shape.segments.push(seg);
+			}
+			result.shapes.push(shape);
+		}
+		
+		flushBits();
+		Lib.alert(result);
+		return result;
+	}
+	
 	private function parseGradientFills(vo:VexObject):Void
 	{	
 		var cv:HTMLCanvasElement = cast Lib.document.createElement('canvas');
@@ -62,10 +127,10 @@ class VexDrawBinaryReader
 			
 			var type:Int = readNBits(8);
 			
-			var tlX:Float = readNBitInt(24) / 20;
-			var tlY:Float = readNBitInt(24) / 20;
-			var trX:Float = readNBitInt(24) / 20;
-			var trY:Float = readNBitInt(24) / 20;
+			var tlX:Float = readNBitInt(24) / twips;
+			var tlY:Float = readNBitInt(24) / twips;
+			var trX:Float = readNBitInt(24) / twips;
+			var trY:Float = readNBitInt(24) / twips;
 			var gradient:CanvasGradient = g.createLinearGradient(tlX, tlY,trX, trY);
 			
 			// stop colors
@@ -84,10 +149,10 @@ class VexDrawBinaryReader
 			vo.fills.push(fill);
 		}	
 		flushBits();
-		Lib.alert(vo.fills);
 	}
 	private function parseSolidFills(vo:VexObject):Void
 	{	
+		fillIndexNBits = readNBits(8);
 		var nBits:Int = readNBitValue();
 		var count:Int = readNBits(11);		
 		for (i in 0...count)
@@ -100,6 +165,7 @@ class VexDrawBinaryReader
 	}
 	private function parseStrokes(vo:VexObject):Void
 	{		
+		strokeIndexNBits = readNBits(8);
 		// stroke colors
 		var nBits:Int = readNBitValue();
 		var count:Int = readNBits(11);		
@@ -115,7 +181,7 @@ class VexDrawBinaryReader
 		var strokeWidths:Array<Float> = new Array<Float>();
 		for (i in 0...count)
 		{
-			strokeWidths.push(readNBits(nBits) / 20);
+			strokeWidths.push(readNBits(nBits) / twips);
 		}
 		
 		for(i in 0...count) 
@@ -134,7 +200,11 @@ class VexDrawBinaryReader
 			bit = 8;
 			index++;
 		}
-		index += 4 - (index % 4);
+		
+		if ((index % 4) != 0)
+		{
+			index += 4 - (index % 4);
+		}
 	}
 	private inline function readByte() : Int
 	{
@@ -269,7 +339,7 @@ class VexDrawBinaryReader
 		//var ws = this._gBits(cm);
 		//for(var i = 0; i < ws.length; i++)
 		//{
-		//this._strokes.push([ws[i]/20, cols[i]&0xFFFFFF, 
+		//this._strokes.push([ws[i]/twips, cols[i]&0xFFFFFF, 
 		//cols[i]&0xFF000000 ? ((~cols[i])>>>24)/2.55:100] );
 		//}
 		//break;

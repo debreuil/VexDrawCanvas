@@ -471,6 +471,7 @@ ddw.Rectangle.prototype = {
 	__class__: ddw.Rectangle
 }
 ddw.Segment = function() {
+	this.points = [];
 };
 ddw.Segment.__name__ = true;
 ddw.Segment.parseVexSegment = function(seg) {
@@ -647,6 +648,7 @@ ddw.Timeline.prototype = $extend(ddw.Definition.prototype,{
 	__class__: ddw.Timeline
 });
 ddw.VexDrawBinaryReader = function(path,vo) {
+	this.twips = 20;
 	var _g = this;
 	this.maskArray = [0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535,131071,262143,524287,1048575,2097151,4194303,8388607,16777215,33554431,67108863,134217727,268435455,536870911,1073741823,2147483647,-1];
 	var xhr = new XMLHttpRequest();
@@ -722,9 +724,10 @@ ddw.VexDrawBinaryReader.prototype = {
 			this.bit = 8;
 			this.index++;
 		}
-		this.index += 4 - this.index % 4;
+		if(this.index % 4 != 0) this.index += 4 - this.index % 4;
 	}
 	,parseStrokes: function(vo) {
+		this.strokeIndexNBits = this.readNBits(8);
 		var nBits = this.readNBitValue();
 		var count = this.readNBits(11);
 		var strokeColors = new Array();
@@ -739,7 +742,7 @@ ddw.VexDrawBinaryReader.prototype = {
 		var _g = 0;
 		while(_g < count) {
 			var i = _g++;
-			strokeWidths.push(this.readNBits(nBits) / 20);
+			strokeWidths.push(this.readNBits(nBits) / this.twips);
 		}
 		var _g = 0;
 		while(_g < count) {
@@ -751,6 +754,7 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.flushBits();
 	}
 	,parseSolidFills: function(vo) {
+		this.fillIndexNBits = this.readNBits(8);
 		var nBits = this.readNBitValue();
 		var count = this.readNBits(11);
 		var _g = 0;
@@ -771,10 +775,10 @@ ddw.VexDrawBinaryReader.prototype = {
 		while(_g < gradientCount) {
 			var gc = _g++;
 			var type = this.readNBits(8);
-			var tlX = this.readNBitInt(24) / 20;
-			var tlY = this.readNBitInt(24) / 20;
-			var trX = this.readNBitInt(24) / 20;
-			var trY = this.readNBitInt(24) / 20;
+			var tlX = this.readNBitInt(24) / this.twips;
+			var tlY = this.readNBitInt(24) / this.twips;
+			var trX = this.readNBitInt(24) / this.twips;
+			var trY = this.readNBitInt(24) / this.twips;
 			var gradient = g.createLinearGradient(tlX,tlY,trX,trY);
 			var colorNBits = this.readNBitValue();
 			var ratioNBits = this.readNBitValue();
@@ -790,7 +794,58 @@ ddw.VexDrawBinaryReader.prototype = {
 			vo.fills.push(fill);
 		}
 		this.flushBits();
-		js.Lib.alert(vo.fills);
+	}
+	,parseSymbol: function(vo) {
+		var result = new ddw.Symbol();
+		result.id = this.readNBits(32);
+		var bx = this.readNBitInt(32) / this.twips;
+		var by = this.readNBitInt(32) / this.twips;
+		var bw = this.readNBitInt(32) / this.twips;
+		var bh = this.readNBitInt(32) / this.twips;
+		result.bounds = new ddw.Rectangle(bx,by,bw,bh);
+		var shapesCount = this.readNBits(11);
+		var _g = 0;
+		while(_g < shapesCount) {
+			var i = _g++;
+			var strokeIndex = this.readNBits(this.strokeIndexNBits);
+			var fillIndex = this.readNBits(this.fillIndexNBits);
+			var shape = new ddw.Shape(this.strokeIndexNBits,this.fillIndexNBits);
+			var nBits = this.readNBitValue();
+			var segmentCount = this.readNBits(11);
+			var _g1 = 0;
+			while(_g1 < segmentCount) {
+				var j = _g1++;
+				var seg = new ddw.Segment();
+				var segType = this.readNBits(2);
+				seg.points.push(this.readNBitInt(nBits) / this.twips);
+				seg.points.push(this.readNBitInt(nBits) / this.twips);
+				switch(segType) {
+				case 0:
+					seg.segmentType = ddw.SegmentType.moveTo;
+					break;
+				case 1:
+					seg.segmentType = ddw.SegmentType.lineTo;
+					break;
+				case 2:
+					seg.segmentType = ddw.SegmentType.quadraticCurveTo;
+					seg.points.push(this.readNBitInt(nBits) / this.twips);
+					seg.points.push(this.readNBitInt(nBits) / this.twips);
+					break;
+				case 3:
+					seg.segmentType = ddw.SegmentType.bezierCurveTo;
+					seg.points.push(this.readNBitInt(nBits) / this.twips);
+					seg.points.push(this.readNBitInt(nBits) / this.twips);
+					seg.points.push(this.readNBitInt(nBits) / this.twips);
+					seg.points.push(this.readNBitInt(nBits) / this.twips);
+					break;
+				}
+				shape.segments.push(seg);
+			}
+			result.shapes.push(shape);
+		}
+		this.flushBits();
+		js.Lib.alert(result);
+		return result;
 	}
 	,parseTag: function(vo) {
 		var tag = this.data[this.index++];
@@ -799,6 +854,9 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.parseSolidFills(vo);
 		var gradientTag = this.data[this.index++];
 		this.parseGradientFills(vo);
+		var symbolDefTag = this.data[this.index++];
+		var symbol = this.parseSymbol(vo);
+		vo.definitions.set(symbol.id,symbol);
 	}
 	,__class__: ddw.VexDrawBinaryReader
 }

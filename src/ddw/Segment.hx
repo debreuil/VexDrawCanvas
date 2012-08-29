@@ -7,6 +7,7 @@ class Segment
 	
 	public function new() 
 	{		
+		points = [];
 	}	
 	
 	public static function parseVexSegment(seg:String):Segment
