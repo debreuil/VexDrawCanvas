@@ -844,22 +844,40 @@ ddw.VexDrawBinaryReader.prototype = {
 			result.shapes.push(shape);
 		}
 		this.flushBits();
-		js.Lib.alert(result);
 		return result;
 	}
 	,parseTag: function(vo) {
-		var tag = this.data[this.index++];
-		this.parseStrokes(vo);
-		var fillTag = this.data[this.index++];
-		this.parseSolidFills(vo);
-		var gradientTag = this.data[this.index++];
-		this.parseGradientFills(vo);
-		var symbolDefTag = this.data[this.index++];
-		var symbol = this.parseSymbol(vo);
-		vo.definitions.set(symbol.id,symbol);
+		var s = "";
+		try {
+			while(this.index < this.data.length) {
+				var tag = this.data[this.index++];
+				switch(tag) {
+				case 5:
+					this.parseStrokes(vo);
+					break;
+				case 6:
+					this.parseSolidFills(vo);
+					break;
+				case 7:
+					this.parseGradientFills(vo);
+					break;
+				case 16:
+					var symbol = this.parseSymbol(vo);
+					vo.definitions.set(symbol.id,symbol);
+					s += "," + symbol.id;
+					break;
+				case 255:
+					throw "__break__";
+					break;
+				}
+			}
+		} catch( e ) { if( e != "__break__" ) throw e; }
+		js.Lib.alert(s);
 	}
 	,__class__: ddw.VexDrawBinaryReader
 }
+ddw.VexDrawTag = function() { }
+ddw.VexDrawTag.__name__ = true;
 ddw.VexObject = function() {
 	this.boxSize = 25;
 	this.gradientStart = 0;
@@ -1283,4 +1301,15 @@ if(typeof window != "undefined") {
 	};
 }
 ddw.Instance.instanceCounter = 0;
+ddw.VexDrawTag.None = 0;
+ddw.VexDrawTag.Header = 1;
+ddw.VexDrawTag.StrokeList = 5;
+ddw.VexDrawTag.SolidFillList = 6;
+ddw.VexDrawTag.GradientFillList = 7;
+ddw.VexDrawTag.ReplacementSolidFillList = 9;
+ddw.VexDrawTag.ReplacementGradientFillList = 10;
+ddw.VexDrawTag.ReplacementStrokeList = 11;
+ddw.VexDrawTag.SymbolDefinition = 16;
+ddw.VexDrawTag.InstanceDefinition = 17;
+ddw.VexDrawTag.End = 255;
 Main.main();

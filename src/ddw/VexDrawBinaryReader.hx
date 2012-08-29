@@ -43,19 +43,32 @@ class VexDrawBinaryReader
 	
 	private function parseTag(vo:VexObject) : Void
 	{
-		var tag:Int = readByte();		
-		parseStrokes(vo);
-		
-		var fillTag:Int = readByte();			
-		parseSolidFills(vo);
-		
-		var gradientTag:Int = readByte();			
-		parseGradientFills(vo);
-		
-		var symbolDefTag:Int = readByte();	
-		var symbol:Symbol = parseSymbol(vo);
-		vo.definitions.set(symbol.id, symbol);
-		
+		var s:String = "";
+		while (index < data.length)
+		{
+			var tag:Int = readByte();		
+			
+			switch(tag)
+			{
+				case VexDrawTag.StrokeList:
+					parseStrokes(vo);
+					
+				case VexDrawTag.SolidFillList:		
+					parseSolidFills(vo);
+					
+				case VexDrawTag.GradientFillList:		
+					parseGradientFills(vo);
+					
+				case VexDrawTag.SymbolDefinition:
+					var symbol:Symbol = parseSymbol(vo);
+					vo.definitions.set(symbol.id, symbol);	
+					s += "," + symbol.id;
+					
+				case VexDrawTag.End:		
+					break;					
+			}
+		}	
+		Lib.alert(s);
 	}
 	
 	private function parseSymbol(vo:VexObject):Symbol
@@ -110,7 +123,6 @@ class VexDrawBinaryReader
 		}
 		
 		flushBits();
-		Lib.alert(result);
 		return result;
 	}
 	
