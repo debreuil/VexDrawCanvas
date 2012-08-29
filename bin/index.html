@@ -27,9 +27,11 @@ function render()
 	var vo = new ddw.VexObject();
 	vo.parseVex(data);	
 	vo.drawColorTables();
-	//vo.drawTimeline(1, null);
+	vo.drawTimeline(1, null);
 	
-	vo.loadBinaryFile("testData.dat");
+	var vo2 = new ddw.VexObject();
+	var vdbr = vo2.parseBinaryFile("testData.dat");
+	
 }
 
 </script>

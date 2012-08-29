@@ -13,10 +13,17 @@ class Color
 		colorString = getColorString(argb);
 	}
 	
+	public static function fromRGBFlipA(rgbfa:Int):Color
+	{
+		var a:Int = (0xFF - ((rgbfa & 0xFF000000) >>> 24)) << 24;
+		var rgb = rgbfa & 0xFFFFFF;
+		return new Color(a + rgb);
+	}
+	
 	public function getColorHex():String
 	{
 		var result:String;
-		var a:Int = 0xFF - ((argb & 0xFF000000) >>> 24);
+		var a:Int = (argb & 0xFF000000) >>> 24;
 		var r:Int = (argb & 0xFF0000) >>> 16;
 		var g:Int = (argb & 0x00FF00) >>> 8;
 		var b:Int = (argb & 0x0000FF);
@@ -28,7 +35,7 @@ class Color
 	public static function getColorString(value):String
 	{
 		var result:String;
-		var a:Int = 0xFF - ((value & 0xFF000000) >>> 24);
+		var a:Int = (value & 0xFF000000) >>> 24;
 		var r:Int = (value & 0xFF0000) >>> 16;
 		var g:Int = (value & 0x00FF00) >>> 8;
 		var b:Int = (value & 0x0000FF);

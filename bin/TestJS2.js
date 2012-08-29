@@ -334,9 +334,14 @@ ddw.Color = function(argb) {
 	this.colorString = ddw.Color.getColorString(argb);
 };
 ddw.Color.__name__ = true;
+ddw.Color.fromRGBFlipA = function(rgbfa) {
+	var a = 255 - ((rgbfa & -16777216) >>> 24) << 24;
+	var rgb = rgbfa & 16777215;
+	return new ddw.Color(a + rgb);
+}
 ddw.Color.getColorString = function(value) {
 	var result;
-	var a = 255 - ((value & -16777216) >>> 24);
+	var a = (value & -16777216) >>> 24;
 	var r = (value & 16711680) >>> 16;
 	var g = (value & 65280) >>> 8;
 	var b = value & 255;
@@ -347,7 +352,7 @@ ddw.Color.getColorString = function(value) {
 ddw.Color.prototype = {
 	getColorHex: function() {
 		var result;
-		var a = 255 - ((this.argb & -16777216) >>> 24);
+		var a = (this.argb & -16777216) >>> 24;
 		var r = (this.argb & 16711680) >>> 16;
 		var g = (this.argb & 65280) >>> 8;
 		var b = this.argb & 255;
@@ -362,34 +367,42 @@ ddw.Definition.__name__ = true;
 ddw.Definition.prototype = {
 	__class__: ddw.Definition
 }
-ddw.Fill = function() {
-};
+ddw.Fill = function() { }
 ddw.Fill.__name__ = true;
 ddw.Fill.parseVexFill = function(fill,g) {
-	var result = new ddw.Fill();
+	var result;
 	if(js.Boot.__instanceof(fill,Array)) {
-		result.isGradient = true;
 		var gradKind = fill[0];
 		var tlbr = fill[1];
 		var gradStops = fill[2];
-		result.gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
+		var gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
 		var gs = 0;
 		while(gs < gradStops.length) {
-			var col = ddw.Color.getColorString(gradStops[gs]);
-			result.gradient.addColorStop(gradStops[gs + 1],col);
+			var col = ddw.Color.fromRGBFlipA(gradStops[gs]);
+			var colString = col.colorString;
+			gradient.addColorStop(gradStops[gs + 1],colString);
 			gs += 2;
 		}
-		result.canvasFill = result.gradient;
-	} else {
-		result.isGradient = false;
-		result.color = new ddw.Color(fill);
-		result.canvasFill = result.color.colorString;
-	}
+		result = new ddw.GradientFill(gradient);
+	} else result = new ddw.SolidFill(ddw.Color.fromRGBFlipA(fill));
 	return result;
 }
 ddw.Fill.prototype = {
 	__class__: ddw.Fill
 }
+ddw.GradientFill = function(gradient) {
+	this.gradient = gradient;
+	this.isGradient = true;
+	this.canvasFill = gradient;
+};
+ddw.GradientFill.__name__ = true;
+ddw.GradientFill.__super__ = ddw.Fill;
+ddw.GradientFill.prototype = $extend(ddw.Fill.prototype,{
+	toString: function() {
+		return "gradient";
+	}
+	,__class__: ddw.GradientFill
+});
 ddw.Instance = function(defId) {
 	this.hasShear = false;
 	this.hasRotation = false;
@@ -508,6 +521,19 @@ ddw.Shape.__name__ = true;
 ddw.Shape.prototype = {
 	__class__: ddw.Shape
 }
+ddw.SolidFill = function(color) {
+	this.color = color;
+	this.isGradient = false;
+	this.canvasFill = color.colorString;
+};
+ddw.SolidFill.__name__ = true;
+ddw.SolidFill.__super__ = ddw.Fill;
+ddw.SolidFill.prototype = $extend(ddw.Fill.prototype,{
+	toString: function() {
+		return this.color.getColorHex();
+	}
+	,__class__: ddw.SolidFill
+});
 ddw.Stroke = function(color,lineWidth) {
 	this.color = color;
 	this.lineWidth = lineWidth;
@@ -620,6 +646,162 @@ ddw.Timeline.__super__ = ddw.Definition;
 ddw.Timeline.prototype = $extend(ddw.Definition.prototype,{
 	__class__: ddw.Timeline
 });
+ddw.VexDrawBinaryReader = function(path,vo) {
+	var _g = this;
+	this.maskArray = [0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535,131071,262143,524287,1048575,2097151,4194303,8388607,16777215,33554431,67108863,134217727,268435455,536870911,1073741823,2147483647,-1];
+	var xhr = new XMLHttpRequest();
+	xhr.open("GET",path,true);
+	xhr.responseType = "arraybuffer";
+	xhr.onload = function(e) {
+		if(xhr.readyState == 4) {
+			_g.data = new Uint8Array(xhr.response);
+			_g.index = 0;
+			_g.bit = 8;
+			_g.parseTag(vo);
+		}
+	};
+	xhr.send();
+};
+ddw.VexDrawBinaryReader.__name__ = true;
+ddw.VexDrawBinaryReader.prototype = {
+	ParseTagX: function() {
+		var result = new Array();
+		var calc = this.bit > 15?this.data[this.index] >> this.bit - 16 & 65535:(this.data[this.index] << 16 - this.bit | this.data[++this.index] >>> this.bit - 16 + 32) & 65535;
+		var nBits = (calc >> 11) + 2;
+		var count = calc & 2047;
+		if(this.bit < 16) this.bit += 32;
+		this.bit -= 16 + nBits;
+		var mask = Math.pow(2,nBits) - 1;
+		while(count-- >= 0) {
+			if(this.bit < 0) {
+				this.bit += 32;
+				result.push((this.data[this.index] << 32 - this.bit | this.data[++this.index] >>> this.bit) & mask);
+			} else result.push(this.data[this.index] >>> this.bit & mask);
+			this.bit -= nBits;
+		}
+		this.bit += nBits;
+		return result;
+	}
+	,readNBits: function(nBits,result) {
+		if(result == null) result = 0;
+		var addingVal;
+		var dif;
+		var mask;
+		while(nBits > 0) if(this.bit > nBits) {
+			dif = this.bit - nBits;
+			mask = this.maskArray[nBits] << dif;
+			addingVal = (this.data[this.index] & mask) >>> dif;
+			result = (result << nBits) + addingVal;
+			this.bit -= nBits;
+			nBits = 0;
+		} else {
+			mask = this.maskArray[this.bit];
+			addingVal = this.data[this.index++] & mask;
+			result = (result << this.bit) + addingVal;
+			nBits -= this.bit;
+			this.bit = 8;
+		}
+		return result;
+	}
+	,readNBitInt: function(nBits) {
+		var result;
+		var bitMask = Math.pow(2,this.bit - 1) | 0;
+		if((this.data[this.index] & bitMask) != 0) result = this.readNBits(nBits,-1); else result = this.readNBits(nBits);
+		return result;
+	}
+	,readNBitValue: function() {
+		var result = this.readNBits(5);
+		result = result == 0?0:result + 2;
+		return result;
+	}
+	,readByte: function() {
+		return this.data[this.index++];
+	}
+	,flushBits: function() {
+		if(this.bit != 8) {
+			this.bit = 8;
+			this.index++;
+		}
+		this.index += 4 - this.index % 4;
+	}
+	,parseStrokes: function(vo) {
+		var nBits = this.readNBitValue();
+		var count = this.readNBits(11);
+		var strokeColors = new Array();
+		var _g = 0;
+		while(_g < count) {
+			var i = _g++;
+			strokeColors.push(this.readNBits(nBits));
+		}
+		nBits = this.readNBitValue();
+		count = this.readNBits(11);
+		var strokeWidths = new Array();
+		var _g = 0;
+		while(_g < count) {
+			var i = _g++;
+			strokeWidths.push(this.readNBits(nBits) / 20);
+		}
+		var _g = 0;
+		while(_g < count) {
+			var i = _g++;
+			var col = ddw.Color.fromRGBFlipA(strokeColors[i]);
+			var stroke = new ddw.Stroke(col,strokeWidths[i]);
+			vo.strokes.push(stroke);
+		}
+		this.flushBits();
+	}
+	,parseSolidFills: function(vo) {
+		var nBits = this.readNBitValue();
+		var count = this.readNBits(11);
+		var _g = 0;
+		while(_g < count) {
+			var i = _g++;
+			var color = ddw.Color.fromRGBFlipA(this.readNBits(nBits));
+			var fill = new ddw.SolidFill(color);
+			vo.fills.push(fill);
+		}
+		this.flushBits();
+	}
+	,parseGradientFills: function(vo) {
+		var cv = js.Lib.document.createElement("canvas");
+		var g = cv.getContext("2d");
+		var padding = this.readNBitValue();
+		var gradientCount = this.readNBits(11);
+		var _g = 0;
+		while(_g < gradientCount) {
+			var gc = _g++;
+			var type = this.readNBits(8);
+			var tlX = this.readNBitInt(24) / 20;
+			var tlY = this.readNBitInt(24) / 20;
+			var trX = this.readNBitInt(24) / 20;
+			var trY = this.readNBitInt(24) / 20;
+			var gradient = g.createLinearGradient(tlX,tlY,trX,trY);
+			var colorNBits = this.readNBitValue();
+			var ratioNBits = this.readNBitValue();
+			var count = this.readNBits(11);
+			var _g1 = 0;
+			while(_g1 < count) {
+				var stops = _g1++;
+				var color = ddw.Color.fromRGBFlipA(this.readNBits(colorNBits));
+				var ratio = this.readNBits(ratioNBits) / 255;
+				gradient.addColorStop(ratio,color.colorString);
+			}
+			var fill = new ddw.GradientFill(gradient);
+			vo.fills.push(fill);
+		}
+		this.flushBits();
+		js.Lib.alert(vo.fills);
+	}
+	,parseTag: function(vo) {
+		var tag = this.data[this.index++];
+		this.parseStrokes(vo);
+		var fillTag = this.data[this.index++];
+		this.parseSolidFills(vo);
+		var gradientTag = this.data[this.index++];
+		this.parseGradientFills(vo);
+	}
+	,__class__: ddw.VexDrawBinaryReader
+}
 ddw.VexObject = function() {
 	this.boxSize = 25;
 	this.gradientStart = 0;
@@ -656,7 +838,7 @@ ddw.VexObject.prototype = {
 		while(_g < _g1.length) {
 			var fill = _g1[_g];
 			++_g;
-			var id = fill.isGradient?"grad_" + gradCount:"sf_" + fill.color.getColorHex();
+			var id = fill.isGradient?"grad_" + gradCount:"sf_" + (js.Boot.__cast(fill , ddw.SolidFill)).color.getColorHex();
 			inst.x = fill.isGradient?(this.boxSize + 2) * gradCount++:(this.boxSize + 2) * solidCount++;
 			inst.y = fill.isGradient?100:70;
 			var cv = this.createCanvas(id,this.boxSize,this.boxSize);
@@ -676,7 +858,7 @@ ddw.VexObject.prototype = {
 	,parseVex: function(data) {
 		var i = 0;
 		while(i < data.strokes.length) {
-			var col = new ddw.Color(data.strokes[i + 1]);
+			var col = ddw.Color.fromRGBFlipA(data.strokes[i + 1]);
 			var stroke = new ddw.Stroke(col,data.strokes[i]);
 			this.strokes.push(stroke);
 			i += 2;
@@ -747,17 +929,8 @@ ddw.VexObject.prototype = {
 		this.timelineStack.unshift(div);
 		return div;
 	}
-	,loadBinaryFile: function(path) {
-		var xhr = new XMLHttpRequest();
-		xhr.open("GET",path,true);
-		xhr.responseType = "arraybuffer";
-		xhr.onload = function(e) {
-			if(xhr.readyState == 4) {
-				var u8Array = new Uint8Array(xhr.response);
-				js.Lib.alert(u8Array[1]);
-			}
-		};
-		xhr.send();
+	,parseBinaryFile: function(path) {
+		var vdbr = new ddw.VexDrawBinaryReader(path,this);
 	}
 	,__class__: ddw.VexObject
 }

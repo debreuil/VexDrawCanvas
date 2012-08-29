@@ -25,25 +25,10 @@ class VexObject
 		this.timelineStack = new Array<Dynamic>();
 		this.timelineStack.push(untyped document.body);
 	}	
-	
-	
-	public function loadBinaryFile(path:String)
-	{		
-		var xhr:XMLHttpRequest = untyped __new__("XMLHttpRequest");
-		xhr.open('GET', path, true);
-		xhr.responseType = 'arraybuffer';
-
-		xhr.onload = function(e:Dynamic):Void
-		{
-			if (xhr.readyState == 4)
-			{
-				var u8Array = new Uint8Array(xhr.response);
-				Lib.alert(u8Array[1]);
-			}
-		}
-		xhr.send();
+	public function parseBinaryFile(path:String):Void
+	{
+		var vdbr = new VexDrawBinaryReader(path, this);
 	}
-	
 	public function pushDiv(id:String):HTMLDivElement
 	{
 		var div:HTMLDivElement = cast Lib.document.createElement('div');
@@ -111,7 +96,7 @@ class VexObject
 		var i:Int = 0;
 		while(i < data.strokes.length)
 		{
-			var col:Color = new Color(cast data.strokes[i + 1]);
+			var col:Color = Color.fromRGBFlipA(cast data.strokes[i + 1]);
 			var stroke:Stroke = new Stroke(col, data.strokes[i]);
 			strokes.push(stroke);
 			i += 2;
@@ -193,7 +178,7 @@ class VexObject
 		var gradCount = 0;
 		for(fill in fills)
 		{
-			var id:String = fill.isGradient ? "grad_" + gradCount : "sf_" + fill.color.getColorHex();
+			var id:String = fill.isGradient ? "grad_" + gradCount : "sf_" + cast(fill, SolidFill).color.getColorHex();
 			inst.x = fill.isGradient ? (boxSize + 2) * gradCount++ : (boxSize + 2) * solidCount++;
 			inst.y = fill.isGradient ? 100 : 70;
 			
