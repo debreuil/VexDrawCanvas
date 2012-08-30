@@ -10,6 +10,7 @@ class Timeline extends Definition
 	public function new() 
 	{	
 		super();
+		isTimeline = true;
 		instances = new Array<Instance>();
 	}	
 	

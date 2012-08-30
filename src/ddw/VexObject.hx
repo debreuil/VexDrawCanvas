@@ -14,7 +14,8 @@ class VexObject
 	var gradientStart:Int = 0;
 	var boxSize:Int = 25;
 	private var timelineStack:Array<Dynamic>;
-
+	private var xx:Float;
+	
 	public function new() 
 	{	
 		this.fills = new Array<Fill>();
@@ -24,11 +25,14 @@ class VexObject
 		
 		this.timelineStack = new Array<Dynamic>();
 		this.timelineStack.push(untyped document.body);
+		
+		this.xx = Math.random();
 	}	
-	public function parseBinaryFile(path:String):Void
+	public function parseBinaryFile(path:String, onParseComplete:Dynamic):Void
 	{
-		var vdbr = new VexDrawBinaryReader(path, this);
+		var vdbr = new VexDrawBinaryReader(path, this, onParseComplete);
 	}
+	
 	public function pushDiv(id:String):HTMLDivElement
 	{
 		var div:HTMLDivElement = cast Lib.document.createElement('div');

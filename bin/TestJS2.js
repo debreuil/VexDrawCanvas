@@ -616,6 +616,7 @@ ddw.Symbol.prototype = $extend(ddw.Definition.prototype,{
 });
 ddw.Timeline = function() {
 	ddw.Definition.call(this);
+	this.isTimeline = true;
 	this.instances = new Array();
 };
 ddw.Timeline.__name__ = true;
@@ -647,7 +648,7 @@ ddw.Timeline.__super__ = ddw.Definition;
 ddw.Timeline.prototype = $extend(ddw.Definition.prototype,{
 	__class__: ddw.Timeline
 });
-ddw.VexDrawBinaryReader = function(path,vo) {
+ddw.VexDrawBinaryReader = function(path,vo,onParseComplete) {
 	this.twips = 20;
 	var _g = this;
 	this.maskArray = [0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535,131071,262143,524287,1048575,2097151,4194303,8388607,16777215,33554431,67108863,134217727,268435455,536870911,1073741823,2147483647,-1];
@@ -660,6 +661,7 @@ ddw.VexDrawBinaryReader = function(path,vo) {
 			_g.index = 0;
 			_g.bit = 8;
 			_g.parseTag(vo);
+			onParseComplete();
 		}
 	};
 	xhr.send();
@@ -812,7 +814,7 @@ ddw.VexDrawBinaryReader.prototype = {
 			var i = _g++;
 			var strokeIndex = this.readNBits(this.strokeIndexNBits);
 			var fillIndex = this.readNBits(this.fillIndexNBits);
-			var shape = new ddw.Shape(this.strokeIndexNBits,this.fillIndexNBits);
+			var shape = new ddw.Shape(strokeIndex,fillIndex);
 			var nBits = this.readNBitValue();
 			var segmentCount = this.readNBits(11);
 			var _g1 = 0;
@@ -887,7 +889,6 @@ ddw.VexDrawBinaryReader.prototype = {
 		return result;
 	}
 	,parseTag: function(vo) {
-		var s = "";
 		try {
 			while(this.index < this.data.length) {
 				var tag = this.data[this.index++];
@@ -908,7 +909,6 @@ ddw.VexDrawBinaryReader.prototype = {
 				case 17:
 					var tl = this.parseTimeline(vo);
 					vo.definitions.set(tl.id,tl);
-					s += "," + tl.id;
 					break;
 				case 255:
 					throw "__break__";
@@ -916,7 +916,6 @@ ddw.VexDrawBinaryReader.prototype = {
 				}
 			}
 		} catch( e ) { if( e != "__break__" ) throw e; }
-		js.Lib.alert(s);
 	}
 	,__class__: ddw.VexDrawBinaryReader
 }
@@ -931,6 +930,7 @@ ddw.VexObject = function() {
 	this.definitions = new IntHash();
 	this.timelineStack = new Array();
 	this.timelineStack.push(document.body);
+	this.xx = Math.random();
 };
 ddw.VexObject.__name__ = true;
 ddw.VexObject.prototype = {
@@ -1049,8 +1049,8 @@ ddw.VexObject.prototype = {
 		this.timelineStack.unshift(div);
 		return div;
 	}
-	,parseBinaryFile: function(path) {
-		var vdbr = new ddw.VexDrawBinaryReader(path,this);
+	,parseBinaryFile: function(path,onParseComplete) {
+		var vdbr = new ddw.VexDrawBinaryReader(path,this,onParseComplete);
 	}
 	,__class__: ddw.VexObject
 }
@@ -1357,3 +1357,5 @@ ddw.VexDrawTag.SymbolDefinition = 16;
 ddw.VexDrawTag.TimelineDefinition = 17;
 ddw.VexDrawTag.End = 255;
 Main.main();
+
+//@ sourceMappingURL=TestJS2.js.map
