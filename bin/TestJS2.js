@@ -649,7 +649,7 @@ ddw.Timeline.prototype = $extend(ddw.Definition.prototype,{
 	__class__: ddw.Timeline
 });
 ddw.VexDrawBinaryReader = function(path,vo,onParseComplete) {
-	this.twips = 20;
+	this.twips = 32;
 	var _g = this;
 	this.maskArray = [0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535,131071,262143,524287,1048575,2097151,4194303,8388607,16777215,33554431,67108863,134217727,268435455,536870911,1073741823,2147483647,-1];
 	var xhr = new XMLHttpRequest();
@@ -876,10 +876,22 @@ ddw.VexDrawBinaryReader.prototype = {
 				var mxNBits = this.readNBitValue();
 				if(hasX) inst.x = this.readNBitInt(mxNBits) / this.twips;
 				if(hasY) inst.y = this.readNBitInt(mxNBits) / this.twips;
-				if(hasScaleX) inst.scaleX = this.readNBitInt(mxNBits) / this.twips;
-				if(hasScaleY) inst.scaleY = this.readNBitInt(mxNBits) / this.twips;
-				if(hasRotation) inst.rotation = this.readNBitInt(mxNBits) / this.twips;
-				if(hasShear) inst.shear = this.readNBitInt(mxNBits) / this.twips;
+				if(hasScaleX) {
+					inst.scaleX = this.readNBitInt(mxNBits) / this.twips;
+					inst.hasScale = true;
+				}
+				if(hasScaleY) {
+					inst.scaleY = this.readNBitInt(mxNBits) / this.twips;
+					inst.hasScale = true;
+				}
+				if(hasRotation) {
+					inst.rotation = this.readNBitInt(mxNBits) / this.twips;
+					inst.hasRotation = true;
+				}
+				if(hasShear) {
+					inst.shear = this.readNBitInt(mxNBits) / this.twips;
+					inst.hasShear = true;
+				}
 			}
 			if(hasName) {
 			}

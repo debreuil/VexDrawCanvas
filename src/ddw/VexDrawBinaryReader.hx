@@ -14,7 +14,7 @@ class VexDrawBinaryReader
 	private var fillIndexNBits:Int;
 	private var strokeIndexNBits:Int;
 	
-	private var twips:Int = 20;
+	private var twips:Int = 32;
 	private var maskArray:Array<Int>;
 		
 	public function new(path:String, vo:VexObject, onParseComplete:Dynamic)
@@ -113,18 +113,22 @@ class VexDrawBinaryReader
 				if (hasScaleX)
 				{
 					inst.scaleX = readNBitInt(mxNBits) / twips;
+					inst.hasScale = true;
 				}
 				if (hasScaleY)
 				{
 					inst.scaleY = readNBitInt(mxNBits) / twips;
+					inst.hasScale = true;
 				}
 				if (hasRotation)
 				{
 					inst.rotation = readNBitInt(mxNBits) / twips;
+					inst.hasRotation = true;
 				}
 				if (hasShear)
 				{
 					inst.shear = readNBitInt(mxNBits) / twips;
+					inst.hasShear = true;
 				}
 			}
 			
