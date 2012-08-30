@@ -716,6 +716,9 @@ ddw.VexDrawBinaryReader.prototype = {
 		result = result == 0?0:result + 2;
 		return result;
 	}
+	,readBit: function() {
+		return this.readNBits(1) == 1?true:false;
+	}
 	,readByte: function() {
 		return this.data[this.index++];
 	}
@@ -846,6 +849,43 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.flushBits();
 		return result;
 	}
+	,parseTimeline: function(vo) {
+		var result = new ddw.Timeline();
+		result.id = this.readNBits(32);
+		var bx = this.readNBitInt(32) / this.twips;
+		var by = this.readNBitInt(32) / this.twips;
+		var bw = this.readNBitInt(32) / this.twips;
+		var bh = this.readNBitInt(32) / this.twips;
+		result.bounds = new ddw.Rectangle(bx,by,bw,bh);
+		var instancesCount = this.readNBits(11);
+		var _g = 0;
+		while(_g < instancesCount) {
+			var i = _g++;
+			var defId = this.readNBits(32);
+			var inst = new ddw.Instance(defId);
+			var hasX = this.readNBits(1) == 1?true:false;
+			var hasY = this.readNBits(1) == 1?true:false;
+			var hasScaleX = this.readNBits(1) == 1?true:false;
+			var hasScaleY = this.readNBits(1) == 1?true:false;
+			var hasRotation = this.readNBits(1) == 1?true:false;
+			var hasShear = this.readNBits(1) == 1?true:false;
+			var hasName = this.readNBits(1) == 1?true:false;
+			if(hasX || hasY || hasScaleX || hasScaleY || hasRotation || hasShear) {
+				var mxNBits = this.readNBitValue();
+				if(hasX) inst.x = this.readNBitInt(mxNBits) / this.twips;
+				if(hasY) inst.y = this.readNBitInt(mxNBits) / this.twips;
+				if(hasScaleX) inst.scaleX = this.readNBitInt(mxNBits) / this.twips;
+				if(hasScaleY) inst.scaleY = this.readNBitInt(mxNBits) / this.twips;
+				if(hasRotation) inst.rotation = this.readNBitInt(mxNBits) / this.twips;
+				if(hasShear) inst.shear = this.readNBitInt(mxNBits) / this.twips;
+			}
+			if(hasName) {
+			}
+			result.instances.push(inst);
+		}
+		this.flushBits();
+		return result;
+	}
 	,parseTag: function(vo) {
 		var s = "";
 		try {
@@ -864,7 +904,11 @@ ddw.VexDrawBinaryReader.prototype = {
 				case 16:
 					var symbol = this.parseSymbol(vo);
 					vo.definitions.set(symbol.id,symbol);
-					s += "," + symbol.id;
+					break;
+				case 17:
+					var tl = this.parseTimeline(vo);
+					vo.definitions.set(tl.id,tl);
+					s += "," + tl.id;
 					break;
 				case 255:
 					throw "__break__";
@@ -1310,6 +1354,6 @@ ddw.VexDrawTag.ReplacementSolidFillList = 9;
 ddw.VexDrawTag.ReplacementGradientFillList = 10;
 ddw.VexDrawTag.ReplacementStrokeList = 11;
 ddw.VexDrawTag.SymbolDefinition = 16;
-ddw.VexDrawTag.InstanceDefinition = 17;
+ddw.VexDrawTag.TimelineDefinition = 17;
 ddw.VexDrawTag.End = 255;
 Main.main();

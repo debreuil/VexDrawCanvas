@@ -15,7 +15,7 @@ class VexDrawTag
 	public inline static var ReplacementStrokeList:Int			= 0x0B;
 	
 	public inline static var SymbolDefinition:Int				= 0x10;
-	public inline static var InstanceDefinition:Int				= 0x11;
+	public inline static var TimelineDefinition:Int				= 0x11;
 	
 	
 	public inline static var End:Int							= 0xFF;

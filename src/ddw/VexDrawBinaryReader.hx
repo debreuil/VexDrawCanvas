@@ -62,13 +62,85 @@ class VexDrawBinaryReader
 				case VexDrawTag.SymbolDefinition:
 					var symbol:Symbol = parseSymbol(vo);
 					vo.definitions.set(symbol.id, symbol);	
-					s += "," + symbol.id;
+					
+				case VexDrawTag.TimelineDefinition:
+					var tl:Timeline = parseTimeline(vo);
+					vo.definitions.set(tl.id, tl);	
+					s += "," + tl.id;
 					
 				case VexDrawTag.End:		
 					break;					
 			}
 		}	
 		Lib.alert(s);
+	}
+	
+	private function parseTimeline(vo:VexObject):Timeline
+	{	
+		var result:Timeline = new Timeline();
+		result.id = readNBits(32);
+				
+		var bx:Float = readNBitInt(32) / twips;
+		var by:Float = readNBitInt(32) / twips;
+		var bw:Float = readNBitInt(32) / twips;
+		var bh:Float = readNBitInt(32) / twips;
+		result.bounds = new Rectangle(bx, by, bw, bh);
+		
+		var instancesCount:Int = readNBits(11);	
+		for (i in 0...instancesCount)
+		{
+			// defid32,hasVals[7:bool], x?,y?,scaleX?, scaleY?, rotation?, shear?, "name"?
+			var defId:Int = readNBits(32);
+			var inst:Instance = new Instance(defId);
+			
+			var hasX:Bool = readBit();
+			var hasY:Bool = readBit();
+			var hasScaleX:Bool = readBit();
+			var hasScaleY:Bool = readBit();
+			var hasRotation:Bool = readBit();
+			var hasShear:Bool = readBit();
+			var hasName:Bool = readBit();
+			
+			if (hasX || hasY || hasScaleX || hasScaleY || hasRotation || hasShear)
+			{				
+				var mxNBits:Int = readNBitValue();
+				if (hasX)
+				{
+					inst.x = readNBitInt(mxNBits) / twips;
+				}
+				if (hasY)
+				{
+					inst.y = readNBitInt(mxNBits) / twips;
+				}
+				if (hasScaleX)
+				{
+					inst.scaleX = readNBitInt(mxNBits) / twips;
+				}
+				if (hasScaleY)
+				{
+					inst.scaleY = readNBitInt(mxNBits) / twips;
+				}
+				if (hasRotation)
+				{
+					inst.rotation = readNBitInt(mxNBits) / twips;
+				}
+				if (hasShear)
+				{
+					inst.shear = readNBitInt(mxNBits) / twips;
+				}
+			}
+			
+			if (hasName)
+			{
+				// todo: read name
+			}
+			
+			result.instances.push(inst);
+		}
+		
+		flushBits();
+		
+		return result;
 	}
 	
 	private function parseSymbol(vo:VexObject):Symbol
@@ -221,6 +293,10 @@ class VexDrawBinaryReader
 	private inline function readByte() : Int
 	{
 		return cast data[index++];
+	}
+	private inline function readBit() : Bool
+	{
+		return readNBits(1) == 1 ? true : false;
 	}
 	
 	private function readNBitValue() : Int
