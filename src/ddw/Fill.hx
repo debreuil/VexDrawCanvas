@@ -6,7 +6,7 @@ class Fill
 {
 	public var isGradient:Bool;
 	public var canvasFill:Dynamic;	
-		
+			
 	public static function parseVexFill(fill:Dynamic, g:CanvasRenderingContext2D):Fill
 	{		
 		var result:Fill;

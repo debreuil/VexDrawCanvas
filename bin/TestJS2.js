@@ -668,25 +668,7 @@ ddw.VexDrawBinaryReader = function(path,vo,onParseComplete) {
 };
 ddw.VexDrawBinaryReader.__name__ = true;
 ddw.VexDrawBinaryReader.prototype = {
-	ParseTagX: function() {
-		var result = new Array();
-		var calc = this.bit > 15?this.data[this.index] >> this.bit - 16 & 65535:(this.data[this.index] << 16 - this.bit | this.data[++this.index] >>> this.bit - 16 + 32) & 65535;
-		var nBits = (calc >> 11) + 2;
-		var count = calc & 2047;
-		if(this.bit < 16) this.bit += 32;
-		this.bit -= 16 + nBits;
-		var mask = Math.pow(2,nBits) - 1;
-		while(count-- >= 0) {
-			if(this.bit < 0) {
-				this.bit += 32;
-				result.push((this.data[this.index] << 32 - this.bit | this.data[++this.index] >>> this.bit) & mask);
-			} else result.push(this.data[this.index] >>> this.bit & mask);
-			this.bit -= nBits;
-		}
-		this.bit += nBits;
-		return result;
-	}
-	,readNBits: function(nBits,result) {
+	readNBits: function(nBits,result) {
 		if(result == null) result = 0;
 		var addingVal;
 		var dif;
@@ -713,6 +695,11 @@ ddw.VexDrawBinaryReader.prototype = {
 		if((this.data[this.index] & bitMask) != 0) result = this.readNBits(nBits,-1); else result = this.readNBits(nBits);
 		return result;
 	}
+	,readNBitRect: function() {
+		var nBits = this.readNBitValue();
+		var result = new ddw.Rectangle(this.readNBitInt(nBits) / this.twips,this.readNBitInt(nBits) / this.twips,this.readNBitInt(nBits) / this.twips,this.readNBitInt(nBits) / this.twips);
+		return result;
+	}
 	,readNBitValue: function() {
 		var result = this.readNBits(5);
 		result = result == 0?0:result + 2;
@@ -733,27 +720,15 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,parseStrokes: function(vo) {
 		this.strokeIndexNBits = this.readNBits(8);
-		var nBits = this.readNBitValue();
+		var colorNBits = this.readNBitValue();
+		var lineWidthNBits = this.readNBitValue();
 		var count = this.readNBits(11);
-		var strokeColors = new Array();
 		var _g = 0;
 		while(_g < count) {
 			var i = _g++;
-			strokeColors.push(this.readNBits(nBits));
-		}
-		nBits = this.readNBitValue();
-		count = this.readNBits(11);
-		var strokeWidths = new Array();
-		var _g = 0;
-		while(_g < count) {
-			var i = _g++;
-			strokeWidths.push(this.readNBits(nBits) / this.twips);
-		}
-		var _g = 0;
-		while(_g < count) {
-			var i = _g++;
-			var col = ddw.Color.fromRGBFlipA(strokeColors[i]);
-			var stroke = new ddw.Stroke(col,strokeWidths[i]);
+			var col = ddw.Color.fromRGBFlipA(this.readNBits(colorNBits));
+			var lw = this.readNBits(lineWidthNBits) / this.twips;
+			var stroke = new ddw.Stroke(col,lw);
 			vo.strokes.push(stroke);
 		}
 		this.flushBits();
@@ -779,11 +754,12 @@ ddw.VexDrawBinaryReader.prototype = {
 		var _g = 0;
 		while(_g < gradientCount) {
 			var gc = _g++;
-			var type = this.readNBits(8);
-			var tlX = this.readNBitInt(24) / this.twips;
-			var tlY = this.readNBitInt(24) / this.twips;
-			var trX = this.readNBitInt(24) / this.twips;
-			var trY = this.readNBitInt(24) / this.twips;
+			var type = this.readNBits(3);
+			var lineNBits = this.readNBitValue();
+			var tlX = this.readNBitInt(lineNBits) / this.twips;
+			var tlY = this.readNBitInt(lineNBits) / this.twips;
+			var trX = this.readNBitInt(lineNBits) / this.twips;
+			var trY = this.readNBitInt(lineNBits) / this.twips;
 			var gradient = g.createLinearGradient(tlX,tlY,trX,trY);
 			var colorNBits = this.readNBitValue();
 			var ratioNBits = this.readNBitValue();
@@ -803,11 +779,7 @@ ddw.VexDrawBinaryReader.prototype = {
 	,parseSymbol: function(vo) {
 		var result = new ddw.Symbol();
 		result.id = this.readNBits(32);
-		var bx = this.readNBitInt(32) / this.twips;
-		var by = this.readNBitInt(32) / this.twips;
-		var bw = this.readNBitInt(32) / this.twips;
-		var bh = this.readNBitInt(32) / this.twips;
-		result.bounds = new ddw.Rectangle(bx,by,bw,bh);
+		result.bounds = this.readNBitRect();
 		var shapesCount = this.readNBits(11);
 		var _g = 0;
 		while(_g < shapesCount) {
@@ -854,11 +826,7 @@ ddw.VexDrawBinaryReader.prototype = {
 	,parseTimeline: function(vo) {
 		var result = new ddw.Timeline();
 		result.id = this.readNBits(32);
-		var bx = this.readNBitInt(32) / this.twips;
-		var by = this.readNBitInt(32) / this.twips;
-		var bw = this.readNBitInt(32) / this.twips;
-		var bh = this.readNBitInt(32) / this.twips;
-		result.bounds = new ddw.Rectangle(bx,by,bw,bh);
+		result.bounds = this.readNBitRect();
 		var instancesCount = this.readNBits(11);
 		var _g = 0;
 		while(_g < instancesCount) {

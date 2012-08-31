@@ -78,11 +78,7 @@ class VexDrawBinaryReader
 		var result:Timeline = new Timeline();
 		result.id = readNBits(32);
 				
-		var bx:Float = readNBitInt(32) / twips;
-		var by:Float = readNBitInt(32) / twips;
-		var bw:Float = readNBitInt(32) / twips;
-		var bh:Float = readNBitInt(32) / twips;
-		result.bounds = new Rectangle(bx, by, bw, bh);
+		result.bounds = readNBitRect();
 		
 		var instancesCount:Int = readNBits(11);	
 		for (i in 0...instancesCount)
@@ -152,11 +148,7 @@ class VexDrawBinaryReader
 		
 		// todo: name
 				
-		var bx:Float = readNBitInt(32) / twips;
-		var by:Float = readNBitInt(32) / twips;
-		var bw:Float = readNBitInt(32) / twips;
-		var bh:Float = readNBitInt(32) / twips;
-		result.bounds = new Rectangle(bx, by, bw, bh);
+		result.bounds = readNBitRect();
 		
 		var shapesCount:Int = readNBits(11);	
 		for (i in 0...shapesCount)
@@ -211,12 +203,13 @@ class VexDrawBinaryReader
 		{
 			// type:i byte, stopColors[...]<Int>, stopRatios[...]<Int>, matrix[6]<Int>
 			
-			var type:Int = readNBits(8);
+			var type:Int = readNBits(3);
 			
-			var tlX:Float = readNBitInt(24) / twips;
-			var tlY:Float = readNBitInt(24) / twips;
-			var trX:Float = readNBitInt(24) / twips;
-			var trY:Float = readNBitInt(24) / twips;
+			var lineNBits:Int = readNBitValue();
+			var tlX:Float = readNBitInt(lineNBits) / twips;
+			var tlY:Float = readNBitInt(lineNBits) / twips;
+			var trX:Float = readNBitInt(lineNBits) / twips;
+			var trY:Float = readNBitInt(lineNBits) / twips;
 			var gradient:CanvasGradient = g.createLinearGradient(tlX, tlY,trX, trY);
 			
 			// stop colors
@@ -253,29 +246,16 @@ class VexDrawBinaryReader
 	{		
 		strokeIndexNBits = readNBits(8);
 		// stroke colors
-		var nBits:Int = readNBitValue();
+		var colorNBits:Int = readNBitValue();
+		var lineWidthNBits = readNBitValue();
 		var count:Int = readNBits(11);		
-		var strokeColors:Array<Int> = new Array<Int>();
 		for (i in 0...count)
 		{
-			strokeColors.push(readNBits(nBits));
-		}		
-		
-		// stroke widths
-		nBits = readNBitValue();
-		count = readNBits(11);		
-		var strokeWidths:Array<Float> = new Array<Float>();
-		for (i in 0...count)
-		{
-			strokeWidths.push(readNBits(nBits) / twips);
-		}
-		
-		for(i in 0...count) 
-		{
-			var col:Color = Color.fromRGBFlipA(strokeColors[i]);
-			var stroke:Stroke = new Stroke(col, strokeWidths[i]);
+			var col:Color = Color.fromRGBFlipA(readNBits(colorNBits));
+			var lw:Float = readNBits(lineWidthNBits) / twips;
+			var stroke:Stroke = new Stroke(col, lw);
 			vo.strokes.push(stroke);
-		}
+		}		
 		
 		flushBits();
 	}
@@ -305,6 +285,18 @@ class VexDrawBinaryReader
 	{
 		var result:Int = readNBits(5);
 		result = (result == 0) ? 0 : result + 2;	
+		return result;
+	}
+	private function readNBitRect() : Rectangle
+	{
+		var nBits:Int = readNBitValue();
+		var result = new Rectangle
+		(
+			readNBitInt(nBits) / twips,
+			readNBitInt(nBits) / twips,
+			readNBitInt(nBits) / twips,
+			readNBitInt(nBits) / twips
+		);
 		return result;
 	}
 	private function readNBitInt(nBits:Int) : Int
@@ -351,123 +343,6 @@ class VexDrawBinaryReader
 		return result;
 	}
    
+      
    
-	private function ParseTagX():Array<Int>
-	{
-		var result = new Array<Int>();
-		var calc:Int = bit > 15 ? 
-			(data[index] >> (bit - 16)) & 0xFFFF :		
-			((data[index] << (16 - bit)) | (data[++index] >>> (bit - 16 + 32))) & 0xFFFF;
-		
-		var nBits:Int = (calc >> 11) + 2;
-		var count:Int = calc & 0x7FF;
-		
-		if (bit < 16)
-		{
-			bit+=32;
-		}
-		bit -= (16 + nBits);
-		
-		var mask:Int = cast Math.pow(2, nBits) - 1;
-		while(count-- >= 0)
-		{
-			if(bit < 0) 
-			{
-				bit += 32; 
-				result.push( ( (data[index] << (32 - bit)) | (data[++index] >>> bit) ) & mask    );
-			}
-			else
-			{
-				result.push( (data[index] >>> bit) & mask );
-			}
-			bit -= nBits;
-		}
-		
-		bit += nBits;
-		
-		return result;
-   }
-   
-   
-   
-   
-//prot.ParseBitpacked = function()
-//{
-	//var count:Int = 0;
-	//var nBits:Int = 0; 
-	//var df:Int = 0;
-//
-	//while(df < this.data.length) 
-	//{
-		//var cm = this._packed[df++];
-		//var tp = cm[0] >>> 24; 
-		//switch(tp)
-		//{
-			//case 0x42: 
-			//var ptCount = (cm[0] >>>13) & 0x7FF
-			//this._nByte = 0;
-			//this._nDif = 13;
-//
-			//while(ptCount--)
-			//{
-				//var tps = this._gBits(cm);
-				//this._paths.push( [tps, this._gBitsN(cm)] );
-			//}
-			//break;
-//
-		//case 0x40:
-		//var cols = this._gBits(cm, 0, 24);
-		//for(var i = 0; i < cols.length; i++)
-		//{
-		//this._colors.push( cols[i]&0xFF000000 ? 
-		//[cols[i]&0xFFFFFF, ((~cols[i])>>>24)/2.55]:[cols[i],100]);
-		//}
-		//break;
-//
-		//case 0x41: 
-		//var cols = this._gBits(cm, 0, 24);
-		//var ws = this._gBits(cm);
-		//for(var i = 0; i < ws.length; i++)
-		//{
-		//this._strokes.push([ws[i]/twips, cols[i]&0xFFFFFF, 
-		//cols[i]&0xFF000000 ? ((~cols[i])>>>24)/2.55:100] );
-		//}
-		//break;
-//
-		//case 0x4C: 
-		//var gfCount = (cm[0] >>>13) & 0x7FF
-		//this._nByte = 0;
-		//this._nDif = 13;
-		//while(gfCount--)
-		//{
-		//if(this._nDif <= 0){this._nDif += 32; this._nByte++;}
-		//var grtype = 
-		//(cm[this._nByte]&Math.pow(2, --this._nDif))?"radial":"linear";
-		//var cols = this._gBits(cm); 
-		//var rats = this._gBits(cm); 
-		//var ms = this._gBitsN(cm);
-		//var rgbs = [];
-		//var as = [];
-		//for(var i = 0; i < cols.length; i++)
-		//{
-		//rgbs.push(cols[i]&0xFFFFFF);
-		//as.push(cols[i]&0xFF000000 ? ((~cols[i])>>>24)/2.55 : 100);
-		//}
-		//var mx = {a:ms[0],b:ms[1],c:0,d:ms[2],e:ms[3],f:0,g:ms[4],h:ms[5],i:1};
-		//this._colors.push([grtype, rgbs, as, rats, mx]);
-		//}
-		//break;
-//
-		//case 0x32:
-		//this._uses.push(this._gBits(cm, 0, 24));
-		//break;
-		//} 
-		//} 
-		//this._colors[0] = [0,0];
-		//this._strokes[0] = [0,0,0];
-		//trace( "=== Time to Parse === " );
-		//trace( new Date().getTime()-t0 );
-		//this._packed = null;
-		//this._parsed = true;
-	//}
 }

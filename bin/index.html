@@ -17,7 +17,7 @@
 </head>
 
 <body onload="render()">
-	
+
 Swf > It3rate > Canvas - Test
 
 <script type="text/javascript">
@@ -26,17 +26,20 @@ var vo;
 function render()
 {
 	var vo1 = new ddw.VexObject();
-	vo1.parseVex(data);	
+	vo1.parseVex(data);
 	//vo.drawColorTables();
 	//vo.drawTimeline(1);
-	
-	vo = new ddw.VexObject();	
-	vo.parseBinaryFile("testData.dat", drawVexObject);
-	
+
+	vo = new ddw.VexObject();
+	vo.parseBinaryFile("testData.dat?tm=" + (new Date()).getTime(), drawVexObject);
+
 }
 function drawVexObject()
 {
-	vo.drawColorTables();
+	//vo.drawColorTables();
+	//var c = new ddw.Color(0xFFFF0000);
+	//var f = new ddw.SolidFill(c);
+	//vo.fills[5] = f;
 	vo.drawTimeline(1);
 }
 

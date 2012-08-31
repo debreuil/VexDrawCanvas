@@ -1,0 +1,95 @@
+Vex Draw Binary Format - It3rate
+=================================
+
+// this format will be parsed into runtime VexObjects when it is loaded.
+
+Tag		Description
+
+0x01	Header // todo
+
+0x05	StrokeList		
+			[8] *strokeNBits* bits required for a stroke index (based on max size of list)
+			[5] color nBits
+			[5] line width nBits
+			[11] stroke count
+			[colNBits,lwNBits]... color/stroke pairs (line width times divisor*)
+			
+0x06	SolidFillList
+			[8] *fillNBits* bits required for a fill index (based on max size of both solidFillList and GradientFillList)
+			[5] color nBits
+			[11] solidFills count
+			[colNBits]... fARGB colors 		
+
+0x07	GradientFillList
+			[5] padding (always zero)
+			[11] gradientFills count
+			Gradient Fills:
+				[3] 0:Linear 1:Radial 2-7:future
+				[5] lineNBits
+				[lineNBits int] Point0 X (times divisor*)
+				[lineNBits int] Point0 Y (times divisor*)
+				[lineNBits int] Point1 X (times divisor*)
+				[lineNBits int] Point1 Y (times divisor*)
+				[5] stopColor nBits
+				[5] stopRatio nBits
+				[11] stopCount
+				[
+					[colNBits] fARGB color
+					[ratioNBits] ratio from 0-255
+				]			
+	
+0x09	ReplacementStrokeList // todo
+0x0A	ReplacementSolidFillList // todo
+0x0B	ReplacementGradientFillList // todo
+		
+0x10	SymbolDefinition:		
+			[32] symbol id
+			[string] name (todo)
+			[RECT] bounds
+			[11] shapeCount
+			Shapes:
+				[strokeNBits] stroke index
+				[fillNBits] fill index
+				[5] segDataNBits
+				[11] segCount
+				[
+					[2] segType (0-moveTo 1-lineTo 2-quadraticTo 3-cubicTo
+					[segDataNBits * points] (move-2pts line-2pts quadratic-4pts cubic-6pts)
+				]
+			
+			
+0x11	TimelineDefinition
+			[32] symbol id
+			[string] name (todo)
+			[RECT] bounds
+			[11] instanceCount
+			Instances:
+				[32] definition id
+				[1] hasValueTranslateX
+				[1] hasValueTranslateY
+				[1] hasValueScaleX
+				[1] hasValueScaleY
+				[1] hasValueRotation
+				[1] hasValueShear				
+				[1] hasName	
+				
+				if(any hasValue):
+					[5] valueNBits
+					[valueNBits] for each hasValue that is true
+					
+				[string] name (todo)
+				
+				
+
+****************************************
+
+[RECT] Rectangle
+			[5] nBits
+			[nBits int] X (times divisor*)
+			[nBits int] Y (times divisor*)
+			[nBits int] WIDTH (times divisor*)
+			[nBits int] HEIGHT (times divisor*)
+		
+* divisor is 32, used to convert floats to ints with (int)(32 * float)
+* int - first bit determines positive or negative
+* fARGB is FlippedA,R,G,B format (A is flipped so no alpha has fewer bits in normal cases)	
