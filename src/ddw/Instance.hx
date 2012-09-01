@@ -21,59 +21,14 @@ class Instance
 	public var hasShear:Bool = false; 
 		
 	public static var instanceCounter:Int = 0;
+
 	
 	public function new(defId:Int) 
 	{	
 		this.definitionId = defId;
 		instanceId = instanceCounter++;
 	}
-	
-	public static function parseVexData(dinst:Dynamic):Instance
-	{
-		// [id,[x,y],[scaleX, scaleY, rotation*, skew*], "name"]
-		var result:Instance = new Instance(dinst[0]);				
 		
-		result.x = dinst[1][0];
-		result.y = dinst[1][1];
-		
-		if(dinst.length > 2 && !Std.is(dinst[2], String))
-		{
-			var mxComp:Array<Float> = dinst[2];
-			
-			result.scaleX = mxComp[0];
-			result.scaleY = mxComp[1];
-			result.hasScale = true;
-			
-			if(mxComp.length > 2)
-			{
-				result.rotation = mxComp[2];
-				result.hasRotation = true;
-			}
-			
-			if(mxComp.length > 3)
-			{
-				result.shear = mxComp[3];
-				result.hasShear = true;
-			}
-		}			
-
-		if(dinst.length > 3)
-		{
-			result.name = dinst[3];
-		}
-		else if(dinst.length > 2 && Std.is(dinst[2], String))
-		{
-			result.name = dinst[2];
-		}
-		else
-		{
-			result.name = "inst_" + result.instanceId;
-		}
-		
-		return result;
-	}
-	
-	
 	public static function drawInstance(inst:Instance, vo:VexObject)
 	{				
 		var divClass:String = (inst.name == null || inst.name == "") ? "inst_" + inst.instanceId : inst.name;

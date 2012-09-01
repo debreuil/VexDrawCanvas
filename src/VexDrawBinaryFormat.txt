@@ -12,7 +12,10 @@ Tag		Description
 			[5] color nBits
 			[5] line width nBits
 			[11] stroke count
-			[colNBits,lwNBits]... color/stroke pairs (line width times divisor*)
+			[
+				[colNBits] fARGB color
+				[lwNBits float] line width
+			]
 			
 0x06	SolidFillList
 			[8] *fillNBits* bits required for a fill index (based on max size of both solidFillList and GradientFillList)
@@ -26,10 +29,10 @@ Tag		Description
 			Gradient Fills:
 				[3] 0:Linear 1:Radial 2-7:future
 				[5] lineNBits
-				[lineNBits int] Point0 X (times divisor*)
-				[lineNBits int] Point0 Y (times divisor*)
-				[lineNBits int] Point1 X (times divisor*)
-				[lineNBits int] Point1 Y (times divisor*)
+				[lineNBits float] Point0 X 
+				[lineNBits float] Point0 Y 
+				[lineNBits float] Point1 X 
+				[lineNBits float] Point1 Y 
 				[5] stopColor nBits
 				[5] stopRatio nBits
 				[11] stopCount
@@ -75,7 +78,7 @@ Tag		Description
 				
 				if(any hasValue):
 					[5] valueNBits
-					[valueNBits] for each hasValue that is true
+					[valueNBits float] for each hasValue that is true
 					
 				[string] name (todo)
 				
@@ -85,11 +88,12 @@ Tag		Description
 
 [RECT] Rectangle
 			[5] nBits
-			[nBits int] X (times divisor*)
-			[nBits int] Y (times divisor*)
-			[nBits int] WIDTH (times divisor*)
-			[nBits int] HEIGHT (times divisor*)
+			[nBits float] X
+			[nBits float] Y
+			[nBits float] WIDTH 
+			[nBits float] HEIGHT
 		
-* divisor is 32, used to convert floats to ints with (int)(32 * float)
-* int - first bit determines positive or negative
+* int - (+-) first bit determines positive or negative
+* float - int (+-) divided by 32, used to convert stored ints to floats
+* point - [float,float] x,y pair
 * fARGB is FlippedA,R,G,B format (A is flipped so no alpha has fewer bits in normal cases)	

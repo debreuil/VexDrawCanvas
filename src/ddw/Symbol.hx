@@ -12,31 +12,7 @@ class Symbol extends Definition
 		isTimeline = false;
 		shapes = new Array<Shape>();
 	}	
-	
-	public static function parseVex(dsym:Dynamic):Symbol
-	{		
-		var symbol:Symbol = new Symbol();
 		
-		symbol.id = dsym.id;
-		symbol.bounds = new Rectangle(dsym.bounds[0], dsym.bounds[1], dsym.bounds[2], dsym.bounds[3]);
-			
-		var dShapes:Array<Dynamic> = cast dsym.shapes;
-		for(dShape in dShapes)
-		{
-			var shape:Shape = new Shape(dShape[0], dShape[1]);
-			
-			var segs:Array<String> = dShape[2].split(" ");
-			for(seg in segs)
-			{
-				var segment:Segment = Segment.parseVexSegment(seg);
-				shape.segments.push(segment);
-			}
-			symbol.shapes.push(shape);
-		}			
-		
-		return symbol;
-	}
-	
 	public static function drawSymbol(symbol:Symbol, metrics:Instance, vo:VexObject)
 	{				
 		var bnds:Rectangle = symbol.bounds;

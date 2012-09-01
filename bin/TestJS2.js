@@ -331,26 +331,26 @@ StringTools.isEOF = function(c) {
 var ddw = ddw || {}
 ddw.Color = function(argb) {
 	this.argb = argb;
-	this.colorString = ddw.Color.getColorString(argb);
+	this.colorString = this.getColorString(argb);
 };
 ddw.Color.__name__ = true;
-ddw.Color.fromRGBFlipA = function(rgbfa) {
-	var a = 255 - ((rgbfa & -16777216) >>> 24) << 24;
-	var rgb = rgbfa & 16777215;
+ddw.Color.fromAFlipRGB = function(afrgb) {
+	var a = 255 - ((afrgb & -16777216) >>> 24) << 24;
+	var rgb = afrgb & 16777215;
 	return new ddw.Color(a + rgb);
 }
-ddw.Color.getColorString = function(value) {
-	var result;
-	var a = (value & -16777216) >>> 24;
-	var r = (value & 16711680) >>> 16;
-	var g = (value & 65280) >>> 8;
-	var b = value & 255;
-	var vals = r + "," + g + "," + b;
-	if(a < 255) result = "rgba(" + vals + "," + a + ")"; else result = "rgb(" + vals + ")";
-	return result;
-}
 ddw.Color.prototype = {
-	getColorHex: function() {
+	getColorString: function(value) {
+		var result;
+		var a = (value & -16777216) >>> 24;
+		var r = (value & 16711680) >>> 16;
+		var g = (value & 65280) >>> 8;
+		var b = value & 255;
+		var vals = r + "," + g + "," + b;
+		if(a < 255) result = "rgba(" + vals + "," + a + ")"; else result = "rgb(" + vals + ")";
+		return result;
+	}
+	,getColorHex: function() {
 		var result;
 		var a = (this.argb & -16777216) >>> 24;
 		var r = (this.argb & 16711680) >>> 16;
@@ -378,13 +378,13 @@ ddw.Fill.parseVexFill = function(fill,g) {
 		var gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
 		var gs = 0;
 		while(gs < gradStops.length) {
-			var col = ddw.Color.fromRGBFlipA(gradStops[gs]);
+			var col = ddw.Color.fromAFlipRGB(gradStops[gs]);
 			var colString = col.colorString;
 			gradient.addColorStop(gradStops[gs + 1],colString);
 			gs += 2;
 		}
 		result = new ddw.GradientFill(gradient);
-	} else result = new ddw.SolidFill(ddw.Color.fromRGBFlipA(fill));
+	} else result = new ddw.SolidFill(ddw.Color.fromAFlipRGB(fill));
 	return result;
 }
 ddw.Fill.prototype = {
@@ -417,27 +417,6 @@ ddw.Instance = function(defId) {
 	this.instanceId = ddw.Instance.instanceCounter++;
 };
 ddw.Instance.__name__ = true;
-ddw.Instance.parseVexData = function(dinst) {
-	var result = new ddw.Instance(dinst[0]);
-	result.x = dinst[1][0];
-	result.y = dinst[1][1];
-	if(dinst.length > 2 && !js.Boot.__instanceof(dinst[2],String)) {
-		var mxComp = dinst[2];
-		result.scaleX = mxComp[0];
-		result.scaleY = mxComp[1];
-		result.hasScale = true;
-		if(mxComp.length > 2) {
-			result.rotation = mxComp[2];
-			result.hasRotation = true;
-		}
-		if(mxComp.length > 3) {
-			result.shear = mxComp[3];
-			result.hasShear = true;
-		}
-	}
-	if(dinst.length > 3) result.name = dinst[3]; else if(dinst.length > 2 && js.Boot.__instanceof(dinst[2],String)) result.name = dinst[2]; else result.name = "inst_" + result.instanceId;
-	return result;
-}
 ddw.Instance.drawInstance = function(inst,vo) {
 	var divClass = inst.name == null || inst.name == ""?"inst_" + inst.instanceId:inst.name;
 	var div = vo.pushDiv(divClass);
@@ -474,29 +453,6 @@ ddw.Segment = function() {
 	this.points = [];
 };
 ddw.Segment.__name__ = true;
-ddw.Segment.parseVexSegment = function(seg) {
-	var result = new ddw.Segment();
-	var nums = seg.substring(1).split(",");
-	switch(seg.charAt(0)) {
-	case "M":
-		result.segmentType = ddw.SegmentType.moveTo;
-		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
-		break;
-	case "L":
-		result.segmentType = ddw.SegmentType.lineTo;
-		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
-		break;
-	case "Q":
-		result.segmentType = ddw.SegmentType.quadraticCurveTo;
-		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3])];
-		break;
-	case "C":
-		result.segmentType = ddw.SegmentType.bezierCurveTo;
-		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3]),Std.parseFloat(nums[4]),Std.parseFloat(nums[5])];
-		break;
-	}
-	return result;
-}
 ddw.Segment.prototype = {
 	__class__: ddw.Segment
 }
@@ -549,28 +505,6 @@ ddw.Symbol = function() {
 	this.shapes = new Array();
 };
 ddw.Symbol.__name__ = true;
-ddw.Symbol.parseVex = function(dsym) {
-	var symbol = new ddw.Symbol();
-	symbol.id = dsym.id;
-	symbol.bounds = new ddw.Rectangle(dsym.bounds[0],dsym.bounds[1],dsym.bounds[2],dsym.bounds[3]);
-	var dShapes = dsym.shapes;
-	var _g = 0;
-	while(_g < dShapes.length) {
-		var dShape = dShapes[_g];
-		++_g;
-		var shape = new ddw.Shape(dShape[0],dShape[1]);
-		var segs = dShape[2].split(" ");
-		var _g1 = 0;
-		while(_g1 < segs.length) {
-			var seg = segs[_g1];
-			++_g1;
-			var segment = ddw.Segment.parseVexSegment(seg);
-			shape.segments.push(segment);
-		}
-		symbol.shapes.push(shape);
-	}
-	return symbol;
-}
 ddw.Symbol.drawSymbol = function(symbol,metrics,vo) {
 	var bnds = symbol.bounds;
 	var offsetX = -bnds.x * metrics.scaleX;
@@ -620,22 +554,6 @@ ddw.Timeline = function() {
 	this.instances = new Array();
 };
 ddw.Timeline.__name__ = true;
-ddw.Timeline.parseVexData = function(dtl) {
-	var result = new ddw.Timeline();
-	result.isTimeline = true;
-	result.id = dtl.id;
-	result.name = dtl.name;
-	result.bounds = new ddw.Rectangle(dtl.bounds[0],dtl.bounds[1],dtl.bounds[2],dtl.bounds[3]);
-	var dInstances = dtl.instances;
-	var _g = 0;
-	while(_g < dInstances.length) {
-		var dInst = dInstances[_g];
-		++_g;
-		var inst = ddw.Instance.parseVexData(dInst);
-		result.instances.push(inst);
-	}
-	return result;
-}
 ddw.Timeline.drawTimeline = function(tl,vo) {
 	var _g = 0, _g1 = tl.instances;
 	while(_g < _g1.length) {
@@ -661,7 +579,7 @@ ddw.VexDrawBinaryReader = function(path,vo,onParseComplete) {
 			_g.index = 0;
 			_g.bit = 8;
 			_g.parseTag(vo);
-			onParseComplete();
+			if(onParseComplete != null) onParseComplete();
 		}
 	};
 	xhr.send();
@@ -726,7 +644,7 @@ ddw.VexDrawBinaryReader.prototype = {
 		var _g = 0;
 		while(_g < count) {
 			var i = _g++;
-			var col = ddw.Color.fromRGBFlipA(this.readNBits(colorNBits));
+			var col = ddw.Color.fromAFlipRGB(this.readNBits(colorNBits));
 			var lw = this.readNBits(lineWidthNBits) / this.twips;
 			var stroke = new ddw.Stroke(col,lw);
 			vo.strokes.push(stroke);
@@ -740,7 +658,7 @@ ddw.VexDrawBinaryReader.prototype = {
 		var _g = 0;
 		while(_g < count) {
 			var i = _g++;
-			var color = ddw.Color.fromRGBFlipA(this.readNBits(nBits));
+			var color = ddw.Color.fromAFlipRGB(this.readNBits(nBits));
 			var fill = new ddw.SolidFill(color);
 			vo.fills.push(fill);
 		}
@@ -767,7 +685,7 @@ ddw.VexDrawBinaryReader.prototype = {
 			var _g1 = 0;
 			while(_g1 < count) {
 				var stops = _g1++;
-				var color = ddw.Color.fromRGBFlipA(this.readNBits(colorNBits));
+				var color = ddw.Color.fromAFlipRGB(this.readNBits(colorNBits));
 				var ratio = this.readNBits(ratioNBits) / 255;
 				gradient.addColorStop(ratio,color.colorString);
 			}
@@ -899,6 +817,133 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,__class__: ddw.VexDrawBinaryReader
 }
+ddw.VexDrawJsonReader = function(json,vo,onParseComplete) {
+	this.parseJson(json,vo);
+	if(onParseComplete != null) onParseComplete();
+};
+ddw.VexDrawJsonReader.__name__ = true;
+ddw.VexDrawJsonReader.parseInstance = function(dinst) {
+	var result = new ddw.Instance(dinst[0]);
+	result.x = dinst[1][0];
+	result.y = dinst[1][1];
+	if(dinst.length > 2 && !js.Boot.__instanceof(dinst[2],String)) {
+		var mxComp = dinst[2];
+		result.scaleX = mxComp[0];
+		result.scaleY = mxComp[1];
+		result.hasScale = true;
+		if(mxComp.length > 2) {
+			result.rotation = mxComp[2];
+			result.hasRotation = true;
+		}
+		if(mxComp.length > 3) {
+			result.shear = mxComp[3];
+			result.hasShear = true;
+		}
+	}
+	if(dinst.length > 3) result.name = dinst[3]; else if(dinst.length > 2 && js.Boot.__instanceof(dinst[2],String)) result.name = dinst[2]; else result.name = "inst_" + result.instanceId;
+	return result;
+}
+ddw.VexDrawJsonReader.parseSegment = function(seg) {
+	var result = new ddw.Segment();
+	var nums = seg.substring(1).split(",");
+	switch(seg.charAt(0)) {
+	case "M":
+		result.segmentType = ddw.SegmentType.moveTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
+		break;
+	case "L":
+		result.segmentType = ddw.SegmentType.lineTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
+		break;
+	case "Q":
+		result.segmentType = ddw.SegmentType.quadraticCurveTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3])];
+		break;
+	case "C":
+		result.segmentType = ddw.SegmentType.bezierCurveTo;
+		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3]),Std.parseFloat(nums[4]),Std.parseFloat(nums[5])];
+		break;
+	}
+	return result;
+}
+ddw.VexDrawJsonReader.prototype = {
+	parseSymbol: function(dsym) {
+		var symbol = new ddw.Symbol();
+		symbol.id = dsym.id;
+		symbol.bounds = new ddw.Rectangle(dsym.bounds[0],dsym.bounds[1],dsym.bounds[2],dsym.bounds[3]);
+		var dShapes = dsym.shapes;
+		var _g = 0;
+		while(_g < dShapes.length) {
+			var dShape = dShapes[_g];
+			++_g;
+			var shape = new ddw.Shape(dShape[0],dShape[1]);
+			var segs = dShape[2].split(" ");
+			var _g1 = 0;
+			while(_g1 < segs.length) {
+				var seg = segs[_g1];
+				++_g1;
+				var segment = ddw.VexDrawJsonReader.parseSegment(seg);
+				shape.segments.push(segment);
+			}
+			symbol.shapes.push(shape);
+		}
+		return symbol;
+	}
+	,parseTimeline: function(dtl) {
+		var result = new ddw.Timeline();
+		result.isTimeline = true;
+		result.id = dtl.id;
+		result.name = dtl.name;
+		result.bounds = new ddw.Rectangle(dtl.bounds[0],dtl.bounds[1],dtl.bounds[2],dtl.bounds[3]);
+		var dInstances = dtl.instances;
+		var _g = 0;
+		while(_g < dInstances.length) {
+			var dInst = dInstances[_g];
+			++_g;
+			var inst = ddw.VexDrawJsonReader.parseInstance(dInst);
+			result.instances.push(inst);
+		}
+		return result;
+	}
+	,parseJson: function(data,vo) {
+		var i = 0;
+		while(i < data.strokes.length) {
+			var col = ddw.Color.fromAFlipRGB(data.strokes[i + 1]);
+			var stroke = new ddw.Stroke(col,data.strokes[i]);
+			vo.strokes.push(stroke);
+			i += 2;
+		}
+		var cv = js.Lib.document.createElement("canvas");
+		var g = cv.getContext("2d");
+		var dFills = data.fills;
+		var _g = 0;
+		while(_g < dFills.length) {
+			var dFill = dFills[_g];
+			++_g;
+			var f = ddw.Fill.parseVexFill(dFill,g);
+			vo.fills.push(f);
+			if(!f.isGradient) vo.gradientStart = i + 1;
+		}
+		var dSymbols = data.symbols;
+		var _g = 0;
+		while(_g < dSymbols.length) {
+			var dSymbol = dSymbols[_g];
+			++_g;
+			var symbol = this.parseSymbol(dSymbol);
+			vo.definitions.set(symbol.id,symbol);
+		}
+		var dTimelines = data.timelines;
+		var _g = 0;
+		while(_g < dTimelines.length) {
+			var dtl = dTimelines[_g];
+			++_g;
+			var tl = this.parseTimeline(dtl);
+			vo.definitions.set(tl.id,tl);
+			if(tl.name != null) vo.namedTimelines.set(tl.name,tl);
+		}
+	}
+	,__class__: ddw.VexDrawJsonReader
+}
 ddw.VexDrawTag = function() { }
 ddw.VexDrawTag.__name__ = true;
 ddw.VexObject = function() {
@@ -910,7 +955,6 @@ ddw.VexObject = function() {
 	this.definitions = new IntHash();
 	this.timelineStack = new Array();
 	this.timelineStack.push(document.body);
-	this.xx = Math.random();
 };
 ddw.VexObject.__name__ = true;
 ddw.VexObject.prototype = {
@@ -955,43 +999,6 @@ ddw.VexObject.prototype = {
 			ddw.Timeline.drawTimeline(tl,this);
 		}
 	}
-	,parseVex: function(data) {
-		var i = 0;
-		while(i < data.strokes.length) {
-			var col = ddw.Color.fromRGBFlipA(data.strokes[i + 1]);
-			var stroke = new ddw.Stroke(col,data.strokes[i]);
-			this.strokes.push(stroke);
-			i += 2;
-		}
-		var cv = js.Lib.document.createElement("canvas");
-		var g = cv.getContext("2d");
-		var dFills = data.fills;
-		var _g = 0;
-		while(_g < dFills.length) {
-			var dFill = dFills[_g];
-			++_g;
-			var f = ddw.Fill.parseVexFill(dFill,g);
-			this.fills.push(f);
-			if(!f.isGradient) this.gradientStart = i + 1;
-		}
-		var dSymbols = data.symbols;
-		var _g = 0;
-		while(_g < dSymbols.length) {
-			var dSymbol = dSymbols[_g];
-			++_g;
-			var symbol = ddw.Symbol.parseVex(dSymbol);
-			this.definitions.set(symbol.id,symbol);
-		}
-		var dTimelines = data.timelines;
-		var _g = 0;
-		while(_g < dTimelines.length) {
-			var dtl = dTimelines[_g];
-			++_g;
-			var tl = ddw.Timeline.parseVexData(dtl);
-			this.definitions.set(tl.id,tl);
-			if(tl.name != null) this.namedTimelines.set(tl.name,tl);
-		}
-	}
 	,transformObject: function(obj,instance,offsetX,offsetY) {
 		if(instance.x != 0 || instance.y != 0 || offsetX != 0 || offsetY != 0) {
 			var orgTxt = offsetX + "px " + offsetY + "px";
@@ -1031,6 +1038,9 @@ ddw.VexObject.prototype = {
 	}
 	,parseBinaryFile: function(path,onParseComplete) {
 		var vdbr = new ddw.VexDrawBinaryReader(path,this,onParseComplete);
+	}
+	,parseJson: function(json,onParseComplete) {
+		var vdbr = new ddw.VexDrawJsonReader(json,this,onParseComplete);
 	}
 	,__class__: ddw.VexObject
 }

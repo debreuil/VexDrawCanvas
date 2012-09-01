@@ -13,10 +13,10 @@ class Color
 		colorString = getColorString(argb);
 	}
 	
-	public static function fromRGBFlipA(rgbfa:Int):Color
+	public static function fromAFlipRGB(afrgb:Int):Color
 	{
-		var a:Int = (0xFF - ((rgbfa & 0xFF000000) >>> 24)) << 24;
-		var rgb = rgbfa & 0xFFFFFF;
+		var a:Int = (0xFF - ((afrgb & 0xFF000000) >>> 24)) << 24;
+		var rgb = afrgb & 0xFFFFFF;
 		return new Color(a + rgb);
 	}
 	
@@ -32,7 +32,8 @@ class Color
 		
 		return result;		
 	}
-	public static function getColorString(value):String
+	
+	public function getColorString(value):String
 	{
 		var result:String;
 		var a:Int = (value & 0xFF000000) >>> 24;

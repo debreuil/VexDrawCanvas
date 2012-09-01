@@ -17,7 +17,7 @@ class VexDrawBinaryReader
 	private var twips:Int = 32;
 	private var maskArray:Array<Int>;
 		
-	public function new(path:String, vo:VexObject, onParseComplete:Dynamic)
+	public function new(path:String, vo:VexObject, onParseComplete:Dynamic = null)
 	{		
 		maskArray = [0x00, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF, 
 					0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF,
@@ -36,7 +36,10 @@ class VexDrawBinaryReader
 				index = 0;
 				bit = 8;
 				parseTag(vo);
-				onParseComplete();
+				if (onParseComplete != null)
+				{
+					onParseComplete();	
+				}
 			}
 		}
 		xhr.send();
@@ -218,7 +221,7 @@ class VexDrawBinaryReader
 			var count:Int = readNBits(11);				
 			for (stops in 0...count)
 			{
-				var color:Color = Color.fromRGBFlipA(readNBits(colorNBits));
+				var color:Color = Color.fromAFlipRGB(readNBits(colorNBits));
 				var ratio:Float = readNBits(ratioNBits) / 255;
 				
 				gradient.addColorStop(ratio, color.colorString);
@@ -236,7 +239,7 @@ class VexDrawBinaryReader
 		var count:Int = readNBits(11);		
 		for (i in 0...count)
 		{
-			var color : Color = Color.fromRGBFlipA(readNBits(nBits));
+			var color : Color = Color.fromAFlipRGB(readNBits(nBits));
 			var fill:SolidFill = new SolidFill(color);
 			vo.fills.push(fill);
 		}	
@@ -251,7 +254,7 @@ class VexDrawBinaryReader
 		var count:Int = readNBits(11);		
 		for (i in 0...count)
 		{
-			var col:Color = Color.fromRGBFlipA(readNBits(colorNBits));
+			var col:Color = Color.fromAFlipRGB(readNBits(colorNBits));
 			var lw:Float = readNBits(lineWidthNBits) / twips;
 			var stroke:Stroke = new Stroke(col, lw);
 			vo.strokes.push(stroke);

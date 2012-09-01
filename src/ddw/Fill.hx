@@ -24,7 +24,7 @@ class Fill
 			var gs:Int = 0;
 			while(gs < gradStops.length)
 			{
-				var col:Color = Color.fromRGBFlipA(gradStops[gs]);
+				var col:Color = Color.fromAFlipRGB(gradStops[gs]);
 				var colString:String = col.colorString;
 				gradient.addColorStop(gradStops[gs + 1], colString);
 				gs += 2;
@@ -34,7 +34,7 @@ class Fill
 		else
 		{
 			// solid fill
-			result = new SolidFill(Color.fromRGBFlipA(fill));
+			result = new SolidFill(Color.fromAFlipRGB(fill));
 		}
 		
 		return result;

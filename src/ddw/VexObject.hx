@@ -11,10 +11,11 @@ class VexObject
 	public var namedTimelines:Hash<Timeline>;
 	public var definitions:IntHash<Definition>;
 	
-	var gradientStart:Int = 0;
+	public var timelineStack:Array<Dynamic>;
+	
+	public var gradientStart:Int = 0;
+	
 	var boxSize:Int = 25;
-	private var timelineStack:Array<Dynamic>;
-	private var xx:Float;
 	
 	public function new() 
 	{	
@@ -23,22 +24,27 @@ class VexObject
 		this.namedTimelines = new Hash<Timeline>();
 		this.definitions = new IntHash<Definition>();
 		
-		this.timelineStack = new Array<Dynamic>();
-		this.timelineStack.push(untyped document.body);
-		
-		this.xx = Math.random();
+		timelineStack = new Array<Dynamic>();
+		timelineStack.push(untyped document.body);
 	}	
+	
+	public function parseJson(json:Dynamic, onParseComplete:Dynamic = null):Void
+	{
+		var vdbr = new VexDrawJsonReader(json, this, onParseComplete);
+	}
+	
 	public function parseBinaryFile(path:String, onParseComplete:Dynamic):Void
 	{
 		var vdbr = new VexDrawBinaryReader(path, this, onParseComplete);
 	}
+		
 	
 	public function pushDiv(id:String):HTMLDivElement
 	{
 		var div:HTMLDivElement = cast Lib.document.createElement('div');
 		div.id = id;	
 		
-		untyped timelineStack[0].appendChild(div);
+		timelineStack[0].appendChild(div);
 		timelineStack.unshift(div);
 		
 		return div;
@@ -94,57 +100,6 @@ class VexObject
 		}
 	}
 	
-	public function parseVex(data:Dynamic)
-	{
-		// strokes
-		var i:Int = 0;
-		while(i < data.strokes.length)
-		{
-			var col:Color = Color.fromRGBFlipA(cast data.strokes[i + 1]);
-			var stroke:Stroke = new Stroke(col, data.strokes[i]);
-			strokes.push(stroke);
-			i += 2;
-		}
-		
-		// fills
-		var cv:HTMLCanvasElement = cast Lib.document.createElement('canvas');
-		var g:CanvasRenderingContext2D = cv.getContext("2d");		
-		var dFills:Array<Dynamic> = cast data.fills;
-		for(dFill in dFills)
-		{
-			var f:Fill = Fill.parseVexFill(dFill, g);
-			fills.push(f);
-			if (!f.isGradient)
-			{
-				gradientStart = i + 1;				
-			}
-		}
-		
-		// symbols	
-		var dSymbols:Array<Dynamic> = cast data.symbols;
-		for(dSymbol in dSymbols)
-		{
-			// "id":2,"name":"","bounds":[-66,-45.95,73,95.2],"shapes":[[][]]	
-			// [2,0,"M-49.05,-7.85 C-51.2..."]
-			
-			var symbol:Symbol = Symbol.parseVex(dSymbol);			
-			definitions.set(symbol.id, symbol);	
-		}
-		
-		// timelines			
-		var dTimelines:Array<Dynamic> = cast data.timelines;
-		for(dtl in dTimelines)
-		{			
-			var tl:Timeline = Timeline.parseVexData(dtl);						
-			definitions.set(tl.id, tl);	
-			
-			if(tl.name != null)
-			{
-				namedTimelines.set(tl.name, tl);
-			}	
-		}
-	}
-
 	public function drawTimeline(index:Int)
 	{	
 		//Timeline: id,name,bounds,instances
@@ -192,25 +147,6 @@ class VexObject
 			g.fillStyle = fill.canvasFill;
 			g.fillRect(0, 0, boxSize, boxSize);				
 		}
-		//for(var i = 0; i < fills.length; i++)
-		//{
-			//if(i < gradientStart)
-			//{
-				//var cv = createContext(boxSize, boxSize);
-				//var g = cv.getContext("2d");			
-				//g.fillStyle = fills[i];
-				//g.fillRect(0, 0, boxSize, boxSize);			
-				//transformObject(cv,{x:(boxSize + 2) * i, y:70}, 0, 0);
-			//}
-			//else
-			//{
-				//var cv = createContext(boxSize, boxSize);
-				//var g = cv.getContext("2d");
-				//g.fillStyle = fills[i];
-				//g.fillRect(0, 0, boxSize, boxSize);
-				//transformObject(cv, {x:(boxSize + 2) * (i - gradientStart + 1), y:100}, 0, 0);
-			//}
-		//}
 	}
 	
 }
