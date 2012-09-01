@@ -369,24 +369,6 @@ ddw.Definition.prototype = {
 }
 ddw.Fill = function() { }
 ddw.Fill.__name__ = true;
-ddw.Fill.parseVexFill = function(fill,g) {
-	var result;
-	if(js.Boot.__instanceof(fill,Array)) {
-		var gradKind = fill[0];
-		var tlbr = fill[1];
-		var gradStops = fill[2];
-		var gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
-		var gs = 0;
-		while(gs < gradStops.length) {
-			var col = ddw.Color.fromAFlipRGB(gradStops[gs]);
-			var colString = col.colorString;
-			gradient.addColorStop(gradStops[gs + 1],colString);
-			gs += 2;
-		}
-		result = new ddw.GradientFill(gradient);
-	} else result = new ddw.SolidFill(ddw.Color.fromAFlipRGB(fill));
-	return result;
-}
 ddw.Fill.prototype = {
 	__class__: ddw.Fill
 }
@@ -456,19 +438,8 @@ ddw.Segment.__name__ = true;
 ddw.Segment.prototype = {
 	__class__: ddw.Segment
 }
-ddw.SegmentType = { __ename__ : true, __constructs__ : ["moveTo","lineTo","quadraticCurveTo","bezierCurveTo"] }
-ddw.SegmentType.moveTo = ["moveTo",0];
-ddw.SegmentType.moveTo.toString = $estr;
-ddw.SegmentType.moveTo.__enum__ = ddw.SegmentType;
-ddw.SegmentType.lineTo = ["lineTo",1];
-ddw.SegmentType.lineTo.toString = $estr;
-ddw.SegmentType.lineTo.__enum__ = ddw.SegmentType;
-ddw.SegmentType.quadraticCurveTo = ["quadraticCurveTo",2];
-ddw.SegmentType.quadraticCurveTo.toString = $estr;
-ddw.SegmentType.quadraticCurveTo.__enum__ = ddw.SegmentType;
-ddw.SegmentType.bezierCurveTo = ["bezierCurveTo",3];
-ddw.SegmentType.bezierCurveTo.toString = $estr;
-ddw.SegmentType.bezierCurveTo.__enum__ = ddw.SegmentType;
+ddw.SegmentType = function() { }
+ddw.SegmentType.__name__ = true;
 ddw.Shape = function(strokeIndex,fillIndex) {
 	this.strokeIndex = strokeIndex;
 	this.fillIndex = fillIndex;
@@ -525,7 +496,7 @@ ddw.Symbol.drawSymbol = function(symbol,metrics,vo) {
 		while(_g2 < _g3.length) {
 			var seg = _g3[_g2];
 			++_g2;
-			switch( (seg.segmentType)[1] ) {
+			switch(seg.segmentType) {
 			case 0:
 				g.moveTo(seg.points[0],seg.points[1]);
 				break;
@@ -716,18 +687,18 @@ ddw.VexDrawBinaryReader.prototype = {
 				seg.points.push(this.readNBitInt(nBits) / this.twips);
 				switch(segType) {
 				case 0:
-					seg.segmentType = ddw.SegmentType.moveTo;
+					seg.segmentType = 0;
 					break;
 				case 1:
-					seg.segmentType = ddw.SegmentType.lineTo;
+					seg.segmentType = 1;
 					break;
 				case 2:
-					seg.segmentType = ddw.SegmentType.quadraticCurveTo;
+					seg.segmentType = 2;
 					seg.points.push(this.readNBitInt(nBits) / this.twips);
 					seg.points.push(this.readNBitInt(nBits) / this.twips);
 					break;
 				case 3:
-					seg.segmentType = ddw.SegmentType.bezierCurveTo;
+					seg.segmentType = 3;
 					seg.points.push(this.readNBitInt(nBits) / this.twips);
 					seg.points.push(this.readNBitInt(nBits) / this.twips);
 					seg.points.push(this.readNBitInt(nBits) / this.twips);
@@ -848,26 +819,44 @@ ddw.VexDrawJsonReader.parseSegment = function(seg) {
 	var nums = seg.substring(1).split(",");
 	switch(seg.charAt(0)) {
 	case "M":
-		result.segmentType = ddw.SegmentType.moveTo;
+		result.segmentType = 0;
 		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
 		break;
 	case "L":
-		result.segmentType = ddw.SegmentType.lineTo;
+		result.segmentType = 1;
 		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1])];
 		break;
 	case "Q":
-		result.segmentType = ddw.SegmentType.quadraticCurveTo;
+		result.segmentType = 2;
 		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3])];
 		break;
 	case "C":
-		result.segmentType = ddw.SegmentType.bezierCurveTo;
+		result.segmentType = 3;
 		result.points = [Std.parseFloat(nums[0]),Std.parseFloat(nums[1]),Std.parseFloat(nums[2]),Std.parseFloat(nums[3]),Std.parseFloat(nums[4]),Std.parseFloat(nums[5])];
 		break;
 	}
 	return result;
 }
 ddw.VexDrawJsonReader.prototype = {
-	parseSymbol: function(dsym) {
+	parseFill: function(fill,g) {
+		var result;
+		if(js.Boot.__instanceof(fill,Array)) {
+			var gradKind = fill[0];
+			var tlbr = fill[1];
+			var gradStops = fill[2];
+			var gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
+			var gs = 0;
+			while(gs < gradStops.length) {
+				var col = ddw.Color.fromAFlipRGB(gradStops[gs]);
+				var colString = col.colorString;
+				gradient.addColorStop(gradStops[gs + 1],colString);
+				gs += 2;
+			}
+			result = new ddw.GradientFill(gradient);
+		} else result = new ddw.SolidFill(ddw.Color.fromAFlipRGB(fill));
+		return result;
+	}
+	,parseSymbol: function(dsym) {
 		var symbol = new ddw.Symbol();
 		symbol.id = dsym.id;
 		symbol.bounds = new ddw.Rectangle(dsym.bounds[0],dsym.bounds[1],dsym.bounds[2],dsym.bounds[3]);
@@ -920,7 +909,7 @@ ddw.VexDrawJsonReader.prototype = {
 		while(_g < dFills.length) {
 			var dFill = dFills[_g];
 			++_g;
-			var f = ddw.Fill.parseVexFill(dFill,g);
+			var f = this.parseFill(dFill,g);
 			vo.fills.push(f);
 			if(!f.isGradient) vo.gradientStart = i + 1;
 		}
@@ -1335,6 +1324,10 @@ if(typeof window != "undefined") {
 	};
 }
 ddw.Instance.instanceCounter = 0;
+ddw.SegmentType.MoveTo = 0;
+ddw.SegmentType.LineTo = 1;
+ddw.SegmentType.QuadraticCurveTo = 2;
+ddw.SegmentType.BezierCurveTo = 3;
 ddw.VexDrawTag.None = 0;
 ddw.VexDrawTag.Header = 1;
 ddw.VexDrawTag.StrokeList = 5;

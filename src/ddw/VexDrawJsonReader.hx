@@ -33,7 +33,7 @@ class VexDrawJsonReader
 		var dFills:Array<Dynamic> = cast data.fills;
 		for(dFill in dFills)
 		{
-			var f:Fill = Fill.parseVexFill(dFill, g);
+			var f:Fill = parseFill(dFill, g);
 			vo.fills.push(f);
 			if (!f.isGradient)
 			{
@@ -168,23 +168,55 @@ class VexDrawJsonReader
 		switch(seg.charAt(0))
 		{
 			case 'M':
-				result.segmentType = SegmentType.moveTo;
+				result.segmentType = SegmentType.MoveTo;
 				result.points = [Std.parseFloat(nums[0]), Std.parseFloat(nums[1])]; 
 				
 			case 'L':
-				result.segmentType = SegmentType.lineTo;
+				result.segmentType = SegmentType.LineTo;
 				result.points = [Std.parseFloat(nums[0]), Std.parseFloat(nums[1])]; 
 				
 			case 'Q':
-				result.segmentType = SegmentType.quadraticCurveTo;
+				result.segmentType = SegmentType.QuadraticCurveTo;
 				result.points = [Std.parseFloat(nums[0]), Std.parseFloat(nums[1]), Std.parseFloat(nums[2]), Std.parseFloat(nums[3])]; 
 				
 			case 'C':
-				result.segmentType = SegmentType.bezierCurveTo;
+				result.segmentType = SegmentType.BezierCurveTo;
 				result.points = [Std.parseFloat(nums[0]), Std.parseFloat(nums[1]), Std.parseFloat(nums[2]), Std.parseFloat(nums[3]), Std.parseFloat(nums[4]), Std.parseFloat(nums[5])]; 
 				
 		}
 		return result;
 	}
+			
+	public function parseFill(fill:Dynamic, g:CanvasRenderingContext2D):Fill
+	{		
+		var result:Fill;
 		
+		if(Std.is(fill, Array))
+		{
+			// gradient
+			// ["L",[-17.98,82.54,-79.42,-77.04],[4280796160,0,4291297159,0.39]],
+						
+			var gradKind:String = fill[0]; // "L" or "R"
+			var tlbr:Array<Float> = fill[1];
+			var gradStops:Array<Int> = fill[2];
+			
+			var gradient:CanvasGradient = g.createLinearGradient(tlbr[0], tlbr[1], tlbr[2], tlbr[3]);
+			var gs:Int = 0;
+			while(gs < gradStops.length)
+			{
+				var col:Color = Color.fromAFlipRGB(gradStops[gs]);
+				var colString:String = col.colorString;
+				gradient.addColorStop(gradStops[gs + 1], colString);
+				gs += 2;
+			}    
+			result = new GradientFill(gradient);
+		}
+		else
+		{
+			// solid fill
+			result = new SolidFill(Color.fromAFlipRGB(fill));
+		}
+		
+		return result;
+	}
 }

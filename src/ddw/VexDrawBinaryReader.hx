@@ -172,15 +172,15 @@ class VexDrawBinaryReader
 				switch(segType)
 				{
 					case 0:
-						seg.segmentType = SegmentType.moveTo;
+						seg.segmentType = SegmentType.MoveTo;
 					case 1:
-						seg.segmentType = SegmentType.lineTo;
+						seg.segmentType = SegmentType.LineTo;
 					case 2:
-						seg.segmentType = SegmentType.quadraticCurveTo;
+						seg.segmentType = SegmentType.QuadraticCurveTo;
 						seg.points.push(readNBitInt(nBits) / twips);		
 						seg.points.push(readNBitInt(nBits) / twips);
 					case 3:
-						seg.segmentType = SegmentType.bezierCurveTo;
+						seg.segmentType = SegmentType.BezierCurveTo;
 						seg.points.push(readNBitInt(nBits) / twips);		
 						seg.points.push(readNBitInt(nBits) / twips);
 						seg.points.push(readNBitInt(nBits) / twips);		

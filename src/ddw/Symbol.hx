@@ -41,16 +41,16 @@ class Symbol extends Definition
 			{
 				switch(seg.segmentType)
 				{
-					case SegmentType.moveTo:	
+					case SegmentType.MoveTo:	
 						g.moveTo(seg.points[0], seg.points[1]);
 						
-					case SegmentType.lineTo:	
+					case SegmentType.LineTo:	
 						g.lineTo(seg.points[0], seg.points[1]);	
 						
-					case SegmentType.quadraticCurveTo:	
+					case SegmentType.QuadraticCurveTo:	
 						g.quadraticCurveTo(seg.points[0], seg.points[1], seg.points[2], seg.points[3]);
 						
-					case SegmentType.bezierCurveTo:	
+					case SegmentType.BezierCurveTo:	
 						g.bezierCurveTo(seg.points[0], seg.points[1], seg.points[2], seg.points[3], seg.points[4], seg.points[5]);
 				}
 			}
