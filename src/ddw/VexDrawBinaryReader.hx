@@ -33,9 +33,7 @@ class VexDrawBinaryReader
 			if (xhr.readyState == 4)
 			{
 				data = new Uint8Array(xhr.response);
-				index = 0;
-				bit = 8;
-				parseTag(vo);
+				parseTags(vo);
 				if (onParseComplete != null)
 				{
 					onParseComplete();	
@@ -45,8 +43,10 @@ class VexDrawBinaryReader
 		xhr.send();
 	}
 	
-	private function parseTag(vo:VexObject) : Void
+	private function parseTags(vo:VexObject) : Void
 	{
+		index = 0;
+		bit = 8;
 		while (index < data.length)
 		{
 			var tag:Int = readByte();		
@@ -212,8 +212,22 @@ class VexDrawBinaryReader
 			var tlX:Float = readNBitInt(lineNBits) / twips;
 			var tlY:Float = readNBitInt(lineNBits) / twips;
 			var trX:Float = readNBitInt(lineNBits) / twips;
-			var trY:Float = readNBitInt(lineNBits) / twips;
-			var gradient:CanvasGradient = g.createLinearGradient(tlX, tlY,trX, trY);
+			var trY:Float = readNBitInt(lineNBits) / twips;			
+
+			var gradient:CanvasGradient;			
+			if (type == 0)
+			{
+				gradient = g.createLinearGradient(tlX, tlY, trX, trY);
+			}
+			else // radial, line is center to rightCenter
+			{
+				//var difX:Float = trX - tlX;
+				//var difY:Float = trY - tlY;
+				//var r2:Float = Math.sqrt(difX * difX + difY * difY);
+				var r2:Float = trX - tlX;
+				gradient = g.createRadialGradient(tlX, tlY, 0, tlX, tlY, r2 * 2);	
+				//Lib.alert(tlX +" " + tlY);
+			}
 			
 			// stop colors
 			var colorNBits:Int = readNBitValue();
@@ -223,7 +237,10 @@ class VexDrawBinaryReader
 			{
 				var color:Color = Color.fromAFlipRGB(readNBits(colorNBits));
 				var ratio:Float = readNBits(ratioNBits) / 255;
-				
+				if (stops == 0 && ratio > 0)
+				{
+					gradient.addColorStop(0, color.colorString);					
+				}
 				gradient.addColorStop(ratio, color.colorString);
 			}	
 			

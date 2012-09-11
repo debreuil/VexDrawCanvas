@@ -196,11 +196,22 @@ class VexDrawJsonReader
 			// gradient
 			// ["L",[-17.98,82.54,-79.42,-77.04],[4280796160,0,4291297159,0.39]],
 						
-			var gradKind:String = fill[0]; // "L" or "R"
+			var gradKind:String = fill[0]; // "L" or "R"			
 			var tlbr:Array<Float> = fill[1];
 			var gradStops:Array<Int> = fill[2];
 			
-			var gradient:CanvasGradient = g.createLinearGradient(tlbr[0], tlbr[1], tlbr[2], tlbr[3]);
+			var gradient:CanvasGradient;
+			if (gradKind == "L")
+			{
+				gradient = g.createLinearGradient(tlbr[0], tlbr[1], tlbr[2], tlbr[3]);
+			}
+			else
+			{
+				var difX:Float = tlbr[2] - tlbr[0];
+				var difY:Float = tlbr[3] - tlbr[1];
+				var r2:Float = Math.sqrt(difX * difX + difY * difY);
+				gradient = g.createRadialGradient(tlbr[0], tlbr[1], 0, tlbr[0], tlbr[1], r2);				
+			}
 			var gs:Int = 0;
 			while(gs < gradStops.length)
 			{

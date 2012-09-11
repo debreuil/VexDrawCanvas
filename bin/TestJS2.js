@@ -547,9 +547,7 @@ ddw.VexDrawBinaryReader = function(path,vo,onParseComplete) {
 	xhr.onload = function(e) {
 		if(xhr.readyState == 4) {
 			_g.data = new Uint8Array(xhr.response);
-			_g.index = 0;
-			_g.bit = 8;
-			_g.parseTag(vo);
+			_g.parseTags(vo);
 			if(onParseComplete != null) onParseComplete();
 		}
 	};
@@ -649,7 +647,11 @@ ddw.VexDrawBinaryReader.prototype = {
 			var tlY = this.readNBitInt(lineNBits) / this.twips;
 			var trX = this.readNBitInt(lineNBits) / this.twips;
 			var trY = this.readNBitInt(lineNBits) / this.twips;
-			var gradient = g.createLinearGradient(tlX,tlY,trX,trY);
+			var gradient;
+			if(type == 0) gradient = g.createLinearGradient(tlX,tlY,trX,trY); else {
+				var r2 = trX - tlX;
+				gradient = g.createRadialGradient(tlX,tlY,0,tlX,tlY,r2 * 2);
+			}
 			var colorNBits = this.readNBitValue();
 			var ratioNBits = this.readNBitValue();
 			var count = this.readNBits(11);
@@ -658,6 +660,7 @@ ddw.VexDrawBinaryReader.prototype = {
 				var stops = _g1++;
 				var color = ddw.Color.fromAFlipRGB(this.readNBits(colorNBits));
 				var ratio = this.readNBits(ratioNBits) / 255;
+				if(stops == 0 && ratio > 0) gradient.addColorStop(0,color.colorString);
 				gradient.addColorStop(ratio,color.colorString);
 			}
 			var fill = new ddw.GradientFill(gradient);
@@ -757,7 +760,9 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.flushBits();
 		return result;
 	}
-	,parseTag: function(vo) {
+	,parseTags: function(vo) {
+		this.index = 0;
+		this.bit = 8;
 		try {
 			while(this.index < this.data.length) {
 				var tag = this.data[this.index++];
@@ -844,7 +849,13 @@ ddw.VexDrawJsonReader.prototype = {
 			var gradKind = fill[0];
 			var tlbr = fill[1];
 			var gradStops = fill[2];
-			var gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]);
+			var gradient;
+			if(gradKind == "L") gradient = g.createLinearGradient(tlbr[0],tlbr[1],tlbr[2],tlbr[3]); else {
+				var difX = tlbr[2] - tlbr[0];
+				var difY = tlbr[3] - tlbr[1];
+				var r2 = Math.sqrt(difX * difX + difY * difY);
+				gradient = g.createRadialGradient(tlbr[0],tlbr[1],0,tlbr[0],tlbr[1],r2);
+			}
 			var gs = 0;
 			while(gs < gradStops.length) {
 				var col = ddw.Color.fromAFlipRGB(gradStops[gs]);
