@@ -219,13 +219,13 @@ class VexDrawBinaryReader
 			{
 				gradient = g.createLinearGradient(tlX, tlY, trX, trY);
 			}
-			else // radial, line is center to rightCenter
+			else // radial, line is center to rightCenter 
 			{
 				//var difX:Float = trX - tlX;
 				//var difY:Float = trY - tlY;
 				//var r2:Float = Math.sqrt(difX * difX + difY * difY);
 				var r2:Float = trX - tlX;
-				gradient = g.createRadialGradient(tlX, tlY, 0, tlX, tlY, r2 * 2);	
+				gradient = g.createRadialGradient(tlX, tlY, 0, tlX, tlY, r2);	
 				//Lib.alert(tlX +" " + tlY);
 			}
 			

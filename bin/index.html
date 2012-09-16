@@ -25,13 +25,20 @@ Swf > It3rate > Canvas - Test
 var vo;
 function render()
 {
-	var vo1 = new ddw.VexObject();
-	vo1.parseJson(data);
+	var useJson = false;
+	if(useJson)
+	{
+		vo = new ddw.VexObject();
+		vo.parseJson(data, drawVexObject);
+	}
+	else
+	{
+		vo = new ddw.VexObject();
+		vo.parseBinaryFile("testData.dat?tm=" + (new Date()).getTime(), drawVexObject);
+	}
 	//vo.drawColorTables();
 	//vo.drawTimeline(1);
 
-	vo = new ddw.VexObject();
-	vo.parseBinaryFile("testData.dat?tm=" + (new Date()).getTime(), drawVexObject);
 
 }
 function drawVexObject()

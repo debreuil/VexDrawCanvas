@@ -650,7 +650,7 @@ ddw.VexDrawBinaryReader.prototype = {
 			var gradient;
 			if(type == 0) gradient = g.createLinearGradient(tlX,tlY,trX,trY); else {
 				var r2 = trX - tlX;
-				gradient = g.createRadialGradient(tlX,tlY,0,tlX,tlY,r2 * 2);
+				gradient = g.createRadialGradient(tlX,tlY,0,tlX,tlY,r2);
 			}
 			var colorNBits = this.readNBitValue();
 			var ratioNBits = this.readNBitValue();
@@ -905,7 +905,7 @@ ddw.VexDrawJsonReader.prototype = {
 		}
 		return result;
 	}
-	,parseJson: function(data,vo) {
+	,parseJson: function(data,vo,onParseComplete) {
 		var i = 0;
 		while(i < data.strokes.length) {
 			var col = ddw.Color.fromAFlipRGB(data.strokes[i + 1]);
@@ -941,6 +941,7 @@ ddw.VexDrawJsonReader.prototype = {
 			vo.definitions.set(tl.id,tl);
 			if(tl.name != null) vo.namedTimelines.set(tl.name,tl);
 		}
+		if(onParseComplete != null) onParseComplete();
 	}
 	,__class__: ddw.VexDrawJsonReader
 }

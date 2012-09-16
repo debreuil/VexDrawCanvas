@@ -15,7 +15,7 @@ class VexDrawJsonReader
 		}
 	}
 	
-	public function parseJson(data:Dynamic, vo:VexObject)
+	public function parseJson(data:Dynamic, vo:VexObject, onParseComplete:Dynamic = null)
 	{		
 		// strokes
 		var i:Int = 0;
@@ -63,6 +63,11 @@ class VexDrawJsonReader
 			{
 				vo.namedTimelines.set(tl.name, tl);
 			}	
+		}
+		
+		if (onParseComplete != null)
+		{
+			onParseComplete();	
 		}
 	}
 
