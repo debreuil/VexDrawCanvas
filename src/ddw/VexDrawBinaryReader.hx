@@ -80,7 +80,10 @@ class VexDrawBinaryReader
 					vo.definitions.set(tl.id, tl);	
 					
 				case VexDrawTag.End:		
-					break;					
+					break;		
+					
+				default:
+					index += len;
 			}
 			
 			if (index - startLoc != len)

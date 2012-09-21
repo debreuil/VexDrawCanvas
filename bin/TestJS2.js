@@ -766,6 +766,8 @@ ddw.VexDrawBinaryReader.prototype = {
 				case 255:
 					throw "__break__";
 					break;
+				default:
+					this.index += len;
 				}
 				if(this.index - startLoc != len) js.Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + this.index + " len:" + len + " tagType: " + tag);
 			}
