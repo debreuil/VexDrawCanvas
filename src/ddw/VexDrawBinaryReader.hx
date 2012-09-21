@@ -53,6 +53,12 @@ class VexDrawBinaryReader
 			
 			switch(tag)
 			{
+				case VexDrawTag.DefinitionNameTable:
+					parseNameTable(vo.definitionNameTable);
+					
+				case VexDrawTag.InstanceNameTable:
+					parseNameTable(vo.instanceNameTable);
+					
 				case VexDrawTag.StrokeList:
 					parseStrokes(vo);
 					
@@ -76,6 +82,28 @@ class VexDrawBinaryReader
 		}	
 	}
 	
+	private function parseNameTable(table:IntHash<String>):Void
+	{	
+		var idNBits:Int = readNBits(5);
+		var nameNBits:Int = readNBits(5);
+		var stringCount:Int = readNBits(11);
+		
+		for (i in 0...stringCount)
+		{
+			var id:Int = readNBitInt(idNBits);
+			var charCount:Int = readNBits(11);
+			var s:String = "";
+			for (j in 0...charCount)
+			{
+				var charVal:Int = readNBitInt(nameNBits);
+				s += String.fromCharCode(charVal);
+			}
+			
+			table.set(id, s);
+		}		
+		
+		flushBits();		
+	}
 	private function parseTimeline(vo:VexObject):Timeline
 	{	
 		var result:Timeline = new Timeline();

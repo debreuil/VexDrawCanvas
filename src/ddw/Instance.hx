@@ -38,27 +38,30 @@ class Instance
 				
 		var def:Definition = vo.definitions.get(inst.definitionId);
 		
-		if(def.isTimeline)
+		if (def != null)
 		{
-			var tl:Timeline = cast(def, Timeline);
-			if (tl.instances.length > 1 || (tl.instances.length == 1 && Std.is(tl.instances[0], Timeline) ))
+			if(def.isTimeline)
 			{
-				Timeline.drawTimeline(cast(def, Timeline), vo);
+				var tl:Timeline = cast(def, Timeline);
+				if (tl.instances.length > 1 || (tl.instances.length == 1 && Std.is(tl.instances[0], Timeline) ))
+				{
+					Timeline.drawTimeline(cast(def, Timeline), vo);
+				}
+				else
+				{
+					var symbol:Symbol = cast(vo.definitions.get(tl.instances[0].definitionId), Symbol);
+					var bnds:Rectangle = symbol.bounds;
+					offsetX = -bnds.x * inst.scaleX;
+					offsetY = -bnds.y * inst.scaleY;
+					
+					Symbol.drawSymbol(symbol, inst, vo);
+				}
 			}
 			else
 			{
-				var symbol:Symbol = cast(vo.definitions.get(tl.instances[0].definitionId), Symbol);
-				var bnds:Rectangle = symbol.bounds;
-				offsetX = -bnds.x * inst.scaleX;
-				offsetY = -bnds.y * inst.scaleY;
-				
-				Symbol.drawSymbol(symbol, inst, vo);
+				// doesn't normally happen
+				Symbol.drawSymbol(cast(def, Symbol), inst, vo);
 			}
-		}
-		else
-		{
-			// doesn't normally happen
-			Symbol.drawSymbol(cast(def, Symbol), inst, vo);
 		}
 		
 		vo.transformObject(div, inst, offsetX, offsetY);

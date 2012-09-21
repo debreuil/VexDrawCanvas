@@ -17,6 +17,20 @@ class VexDrawJsonReader
 	
 	public function parseJson(data:Dynamic, vo:VexObject, onParseComplete:Dynamic = null)
 	{		
+		// definition name table
+		var dDefNames:Array<Dynamic> = cast data.definitionNameTable;
+		for(def in dDefNames)
+		{			
+			vo.definitionNameTable.set(def[0], def[1]);	
+		}
+		
+		// instance name table
+		var dInstNames:Array<Dynamic> = cast data.instanceNameTable;
+		for(inst in dInstNames)
+		{
+			vo.instanceNameTable.set(inst[0], inst[1]);
+		}
+		
 		// strokes
 		var i:Int = 0;
 		while(i < data.strokes.length)
@@ -61,7 +75,7 @@ class VexDrawJsonReader
 			
 			if(tl.name != null)
 			{
-				vo.namedTimelines.set(tl.name, tl);
+				vo.definitionNameTable.set(tl.id, tl.name);	
 			}	
 		}
 		

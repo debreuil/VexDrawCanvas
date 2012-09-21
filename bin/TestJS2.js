@@ -16,57 +16,6 @@ MessagePort.__name__ = true;
 MessagePort.prototype = {
 	__class__: MessagePort
 }
-var Hash = function() {
-	this.h = { };
-};
-Hash.__name__ = true;
-Hash.prototype = {
-	toString: function() {
-		var s = new StringBuf();
-		s.b += Std.string("{");
-		var it = this.keys();
-		while( it.hasNext() ) {
-			var i = it.next();
-			s.b += Std.string(i);
-			s.b += Std.string(" => ");
-			s.b += Std.string(Std.string(this.get(i)));
-			if(it.hasNext()) s.b += Std.string(", ");
-		}
-		s.b += Std.string("}");
-		return s.b;
-	}
-	,iterator: function() {
-		return { ref : this.h, it : this.keys(), hasNext : function() {
-			return this.it.hasNext();
-		}, next : function() {
-			var i = this.it.next();
-			return this.ref["$" + i];
-		}};
-	}
-	,keys: function() {
-		var a = [];
-		for( var key in this.h ) {
-		if(this.h.hasOwnProperty(key)) a.push(key.substr(1));
-		}
-		return HxOverrides.iter(a);
-	}
-	,remove: function(key) {
-		key = "$" + key;
-		if(!this.h.hasOwnProperty(key)) return false;
-		delete(this.h[key]);
-		return true;
-	}
-	,exists: function(key) {
-		return this.h.hasOwnProperty("$" + key);
-	}
-	,get: function(key) {
-		return this.h["$" + key];
-	}
-	,set: function(key,value) {
-		this.h["$" + key] = value;
-	}
-	,__class__: Hash
-}
 var HxOverrides = function() { }
 HxOverrides.__name__ = true;
 HxOverrides.dateStr = function(date) {
@@ -405,16 +354,18 @@ ddw.Instance.drawInstance = function(inst,vo) {
 	var offsetX = 0;
 	var offsetY = 0;
 	var def = vo.definitions.get(inst.definitionId);
-	if(def.isTimeline) {
-		var tl = js.Boot.__cast(def , ddw.Timeline);
-		if(tl.instances.length > 1 || tl.instances.length == 1 && js.Boot.__instanceof(tl.instances[0],ddw.Timeline)) ddw.Timeline.drawTimeline(js.Boot.__cast(def , ddw.Timeline),vo); else {
-			var symbol = js.Boot.__cast(vo.definitions.get(tl.instances[0].definitionId) , ddw.Symbol);
-			var bnds = symbol.bounds;
-			offsetX = -bnds.x * inst.scaleX;
-			offsetY = -bnds.y * inst.scaleY;
-			ddw.Symbol.drawSymbol(symbol,inst,vo);
-		}
-	} else ddw.Symbol.drawSymbol(js.Boot.__cast(def , ddw.Symbol),inst,vo);
+	if(def != null) {
+		if(def.isTimeline) {
+			var tl = js.Boot.__cast(def , ddw.Timeline);
+			if(tl.instances.length > 1 || tl.instances.length == 1 && js.Boot.__instanceof(tl.instances[0],ddw.Timeline)) ddw.Timeline.drawTimeline(js.Boot.__cast(def , ddw.Timeline),vo); else {
+				var symbol = js.Boot.__cast(vo.definitions.get(tl.instances[0].definitionId) , ddw.Symbol);
+				var bnds = symbol.bounds;
+				offsetX = -bnds.x * inst.scaleX;
+				offsetY = -bnds.y * inst.scaleY;
+				ddw.Symbol.drawSymbol(symbol,inst,vo);
+			}
+		} else ddw.Symbol.drawSymbol(js.Boot.__cast(def , ddw.Symbol),inst,vo);
+	}
 	vo.transformObject(div,inst,offsetX,offsetY);
 	vo.popDiv();
 }
@@ -760,6 +711,26 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.flushBits();
 		return result;
 	}
+	,parseNameTable: function(table) {
+		var idNBits = this.readNBits(5);
+		var nameNBits = this.readNBits(5);
+		var stringCount = this.readNBits(11);
+		var _g = 0;
+		while(_g < stringCount) {
+			var i = _g++;
+			var id = this.readNBitInt(idNBits);
+			var charCount = this.readNBits(11);
+			var s = "";
+			var _g1 = 0;
+			while(_g1 < charCount) {
+				var j = _g1++;
+				var charVal = this.readNBitInt(nameNBits);
+				s += String.fromCharCode(charVal);
+			}
+			table.set(id,s);
+		}
+		this.flushBits();
+	}
 	,parseTags: function(vo) {
 		this.index = 0;
 		this.bit = 8;
@@ -767,6 +738,12 @@ ddw.VexDrawBinaryReader.prototype = {
 			while(this.index < this.data.length) {
 				var tag = this.data[this.index++];
 				switch(tag) {
+				case 32:
+					this.parseNameTable(vo.definitionNameTable);
+					break;
+				case 33:
+					this.parseNameTable(vo.instanceNameTable);
+					break;
 				case 5:
 					this.parseStrokes(vo);
 					break;
@@ -906,6 +883,20 @@ ddw.VexDrawJsonReader.prototype = {
 		return result;
 	}
 	,parseJson: function(data,vo,onParseComplete) {
+		var dDefNames = data.definitionNameTable;
+		var _g = 0;
+		while(_g < dDefNames.length) {
+			var def = dDefNames[_g];
+			++_g;
+			vo.definitionNameTable.set(def[0],def[1]);
+		}
+		var dInstNames = data.instanceNameTable;
+		var _g = 0;
+		while(_g < dInstNames.length) {
+			var inst = dInstNames[_g];
+			++_g;
+			vo.instanceNameTable.set(inst[0],inst[1]);
+		}
 		var i = 0;
 		while(i < data.strokes.length) {
 			var col = ddw.Color.fromAFlipRGB(data.strokes[i + 1]);
@@ -939,7 +930,7 @@ ddw.VexDrawJsonReader.prototype = {
 			++_g;
 			var tl = this.parseTimeline(dtl);
 			vo.definitions.set(tl.id,tl);
-			if(tl.name != null) vo.namedTimelines.set(tl.name,tl);
+			if(tl.name != null) vo.definitionNameTable.set(tl.id,tl.name);
 		}
 		if(onParseComplete != null) onParseComplete();
 	}
@@ -952,7 +943,8 @@ ddw.VexObject = function() {
 	this.gradientStart = 0;
 	this.fills = new Array();
 	this.strokes = new Array();
-	this.namedTimelines = new Hash();
+	this.definitionNameTable = new IntHash();
+	this.instanceNameTable = new IntHash();
 	this.definitions = new IntHash();
 	this.timelineStack = new Array();
 	this.timelineStack.push(document.body);
@@ -1350,6 +1342,10 @@ ddw.VexDrawTag.ReplacementGradientFillList = 10;
 ddw.VexDrawTag.ReplacementStrokeList = 11;
 ddw.VexDrawTag.SymbolDefinition = 16;
 ddw.VexDrawTag.TimelineDefinition = 17;
+ddw.VexDrawTag.DefinitionNameTable = 32;
+ddw.VexDrawTag.InstanceNameTable = 33;
+ddw.VexDrawTag.ColorNameTable = 34;
+ddw.VexDrawTag.PathNameTable = 35;
 ddw.VexDrawTag.End = 255;
 Main.main();
 

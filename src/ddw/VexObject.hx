@@ -8,7 +8,9 @@ class VexObject
 	public var fills:Array<Fill>;
 	public var strokes:Array<Stroke>;
 	
-	public var namedTimelines:Hash<Timeline>;
+	public var definitionNameTable:IntHash<String>;
+	public var instanceNameTable:IntHash<String>;
+	
 	public var definitions:IntHash<Definition>;
 	
 	public var timelineStack:Array<Dynamic>;
@@ -21,7 +23,9 @@ class VexObject
 	{	
 		this.fills = new Array<Fill>();
 		this.strokes = new Array<Stroke>();
-		this.namedTimelines = new Hash<Timeline>();
+		this.definitionNameTable = new IntHash<String>();
+		this.instanceNameTable = new IntHash<String>();
+		
 		this.definitions = new IntHash<Definition>();
 		
 		timelineStack = new Array<Dynamic>();
