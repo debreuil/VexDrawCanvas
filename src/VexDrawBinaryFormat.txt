@@ -3,9 +3,37 @@ Vex Draw Binary Format - It3rate
 
 // this format will be parsed into runtime VexObjects when it is loaded.
 
+** All tags are lined to a rounded 8 bits.
+tag format:
+	[8] tagType
+	[24] tag Length in bytes, not including this (4 byte) tag header
+	[...] tag bits
+	[] flush to nearest next byte, or self is already aligned
+	
+	
+
 Tag		Description
 
 0x01	Header // todo
+
+0x20	DefinitionNameTable
+			[5] nBits for idIndex
+			[5] nBits required for string character
+			[11] number of entries in table
+			entry:
+				[idIndexNBits] id
+				[11] number of unicode characters in string
+				char:
+					[charNBits] unicode character value of current char
+					
+0x21	InstancenNameTable
+			(same format as DefinitionNameTable)
+			
+0x22	ColorNameTable
+			(todo, will have same format as DefinitionNameTable)
+			
+0x23	PathNameTable
+			(todo, will have same format as DefinitionNameTable)
 
 0x05	StrokeList		
 			[8] *strokeNBits* bits required for a stroke index (based on max size of list)

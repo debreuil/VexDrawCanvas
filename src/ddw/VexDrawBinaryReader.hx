@@ -3,6 +3,7 @@ package ddw;
 import HTML5Dom;
 import js.Dom;
 import js.Lib;
+import js.Storage;
 
 	
 class VexDrawBinaryReader 
@@ -49,7 +50,9 @@ class VexDrawBinaryReader
 		bit = 8;
 		while (index < data.length)
 		{
-			var tag:Int = readByte();		
+			var tag:Int = readByte();
+			var len:Int = readNBitInt(24);
+			var startLoc:Int = index;
 			
 			switch(tag)
 			{
@@ -78,6 +81,11 @@ class VexDrawBinaryReader
 					
 				case VexDrawTag.End:		
 					break;					
+			}
+			
+			if (index - startLoc != len)
+			{
+				Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + index + " len:" + len + " tagType: " + tag);
 			}
 		}	
 	}

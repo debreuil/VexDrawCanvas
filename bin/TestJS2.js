@@ -737,6 +737,8 @@ ddw.VexDrawBinaryReader.prototype = {
 		try {
 			while(this.index < this.data.length) {
 				var tag = this.data[this.index++];
+				var len = this.readNBitInt(24);
+				var startLoc = this.index;
 				switch(tag) {
 				case 32:
 					this.parseNameTable(vo.definitionNameTable);
@@ -765,6 +767,7 @@ ddw.VexDrawBinaryReader.prototype = {
 					throw "__break__";
 					break;
 				}
+				if(this.index - startLoc != len) js.Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + this.index + " len:" + len + " tagType: " + tag);
 			}
 		} catch( e ) { if( e != "__break__" ) throw e; }
 	}
