@@ -117,17 +117,23 @@ class VexDrawJsonReader
 		symbol.id = dsym.id;
 		symbol.bounds = new Rectangle(dsym.bounds[0], dsym.bounds[1], dsym.bounds[2], dsym.bounds[3]);
 			
-		var dShapes:Array<Dynamic> = cast dsym.shapes;
-		for(dShape in dShapes)
+		var dPaths:Array<Dynamic> = cast dsym.paths;
+		for(dPath in dPaths)
 		{
-			var shape:Shape = new Shape(dShape[0], dShape[1]);
-			
-			var segs:Array<String> = dShape[2].split(" ");
+			var path:Path = new Path();	
+			var segs:Array<String> = dPath.split(" ");
 			for(seg in segs)
 			{
 				var segment:Segment = parseSegment(seg);
-				shape.segments.push(segment);
-			}
+				path.segments.push(segment);
+			}			
+			symbol.paths.push(path);
+		}
+		
+		var dShapes:Array<Dynamic> = cast dsym.shapes;
+		for(dShape in dShapes)
+		{
+			var shape:Shape = new Shape(dShape[0], dShape[1], dShape[2]);			
 			symbol.shapes.push(shape);
 		}			
 		

@@ -4,12 +4,14 @@ import HTML5Dom;
 
 class Symbol extends Definition
 {
+	public var paths:Array<Path>;
 	public var shapes:Array<Shape>;
 		
 	public function new() 
 	{		
 		super();
 		isTimeline = false;
+		paths = new Array<Path>();
 		shapes = new Array<Shape>();
 	}	
 		
@@ -36,8 +38,10 @@ class Symbol extends Definition
 			g.lineWidth = vo.strokes[shape.strokeIndex].lineWidth;
 			g.strokeStyle = vo.strokes[shape.strokeIndex].color.colorString;
 			
+			var path:Path = symbol.paths[shape.pathIndex];
+			
 			g.beginPath();
-			for(seg in shape.segments)
+			for(seg in path.segments)
 			{
 				switch(seg.segmentType)
 				{

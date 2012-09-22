@@ -4,13 +4,13 @@ class Shape
 {
 	public var strokeIndex:Int;
 	public var fillIndex:Int;
-	public var segments:Array<Segment>;
+	public var pathIndex:Int;
 	
-	public function new(strokeIndex:Int, fillIndex:Int) 
+	public function new(strokeIndex:Int, fillIndex:Int, pathIndex:Int) 
 	{
 		this.strokeIndex = strokeIndex;
 		this.fillIndex = fillIndex;
-		segments = new Array<Segment>();
+		this.pathIndex = pathIndex;
 	}
 	
 }

@@ -14,9 +14,13 @@
 	"symbols":[
 	{
 		"id":int,"name":string,"bounds":[topLeft:float,topRight:float,width:float,height:float],
+		"paths":
+		[
+			"svg absolute path"... // the index of the path is the order. Each symbol starts at index 0 for its first path.
+		],
 		"shapes":
 		[
-			[strokeIndex:int, fillIndex:int, path:svgString]... // as many strokes as needed, always use abs paths
+			[strokeIndex:int, fillIndex:int, pathIndex:int]... // one for each shape. Strokes and fills are usually separate to insure strokes on top (if from swf)
 		]
 	},
 	

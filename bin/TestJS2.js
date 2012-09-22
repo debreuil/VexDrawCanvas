@@ -372,6 +372,13 @@ ddw.Instance.drawInstance = function(inst,vo) {
 ddw.Instance.prototype = {
 	__class__: ddw.Instance
 }
+ddw.Path = function() {
+	this.segments = new Array();
+};
+ddw.Path.__name__ = true;
+ddw.Path.prototype = {
+	__class__: ddw.Path
+}
 ddw.Rectangle = function(x,y,width,height) {
 	this.x = x;
 	this.y = y;
@@ -391,10 +398,10 @@ ddw.Segment.prototype = {
 }
 ddw.SegmentType = function() { }
 ddw.SegmentType.__name__ = true;
-ddw.Shape = function(strokeIndex,fillIndex) {
+ddw.Shape = function(strokeIndex,fillIndex,pathIndex) {
 	this.strokeIndex = strokeIndex;
 	this.fillIndex = fillIndex;
-	this.segments = new Array();
+	this.pathIndex = pathIndex;
 };
 ddw.Shape.__name__ = true;
 ddw.Shape.prototype = {
@@ -424,6 +431,7 @@ ddw.Stroke.prototype = {
 ddw.Symbol = function() {
 	ddw.Definition.call(this);
 	this.isTimeline = false;
+	this.paths = new Array();
 	this.shapes = new Array();
 };
 ddw.Symbol.__name__ = true;
@@ -442,8 +450,9 @@ ddw.Symbol.drawSymbol = function(symbol,metrics,vo) {
 		g.fillStyle = vo.fills[shape.fillIndex].canvasFill;
 		g.lineWidth = vo.strokes[shape.strokeIndex].lineWidth;
 		g.strokeStyle = vo.strokes[shape.strokeIndex].color.colorString;
+		var path = symbol.paths[shape.pathIndex];
 		g.beginPath();
-		var _g2 = 0, _g3 = shape.segments;
+		var _g2 = 0, _g3 = path.segments;
 		while(_g2 < _g3.length) {
 			var seg = _g3[_g2];
 			++_g2;
@@ -623,13 +632,12 @@ ddw.VexDrawBinaryReader.prototype = {
 		var result = new ddw.Symbol();
 		result.id = this.readNBits(32);
 		result.bounds = this.readNBitRect();
-		var shapesCount = this.readNBits(11);
+		var pathsCount = this.readNBits(11);
+		var pathIndexNBits = this.readNBits(5);
 		var _g = 0;
-		while(_g < shapesCount) {
+		while(_g < pathsCount) {
 			var i = _g++;
-			var strokeIndex = this.readNBits(this.strokeIndexNBits);
-			var fillIndex = this.readNBits(this.fillIndexNBits);
-			var shape = new ddw.Shape(strokeIndex,fillIndex);
+			var path = new ddw.Path();
 			var nBits = this.readNBitValue();
 			var segmentCount = this.readNBits(11);
 			var _g1 = 0;
@@ -659,8 +667,18 @@ ddw.VexDrawBinaryReader.prototype = {
 					seg.points.push(this.readNBitInt(nBits) / this.twips);
 					break;
 				}
-				shape.segments.push(seg);
+				path.segments.push(seg);
 			}
+			result.paths.push(path);
+		}
+		var shapesCount = this.readNBits(11);
+		var _g = 0;
+		while(_g < shapesCount) {
+			var i = _g++;
+			var strokeIndex = this.readNBits(this.strokeIndexNBits);
+			var fillIndex = this.readNBits(this.fillIndexNBits);
+			var pathIndex = this.readNBits(pathIndexNBits);
+			var shape = new ddw.Shape(strokeIndex,fillIndex,pathIndex);
 			result.shapes.push(shape);
 		}
 		this.flushBits();
@@ -853,20 +871,28 @@ ddw.VexDrawJsonReader.prototype = {
 		var symbol = new ddw.Symbol();
 		symbol.id = dsym.id;
 		symbol.bounds = new ddw.Rectangle(dsym.bounds[0],dsym.bounds[1],dsym.bounds[2],dsym.bounds[3]);
-		var dShapes = dsym.shapes;
+		var dPaths = dsym.paths;
 		var _g = 0;
-		while(_g < dShapes.length) {
-			var dShape = dShapes[_g];
+		while(_g < dPaths.length) {
+			var dPath = dPaths[_g];
 			++_g;
-			var shape = new ddw.Shape(dShape[0],dShape[1]);
-			var segs = dShape[2].split(" ");
+			var path = new ddw.Path();
+			var segs = dPath.split(" ");
 			var _g1 = 0;
 			while(_g1 < segs.length) {
 				var seg = segs[_g1];
 				++_g1;
 				var segment = ddw.VexDrawJsonReader.parseSegment(seg);
-				shape.segments.push(segment);
+				path.segments.push(segment);
 			}
+			symbol.paths.push(path);
+		}
+		var dShapes = dsym.shapes;
+		var _g = 0;
+		while(_g < dShapes.length) {
+			var dShape = dShapes[_g];
+			++_g;
+			var shape = new ddw.Shape(dShape[0],dShape[1],dShape[2]);
 			symbol.shapes.push(shape);
 		}
 		return symbol;

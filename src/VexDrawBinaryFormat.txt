@@ -77,16 +77,22 @@ Tag		Description
 			[32] symbol id
 			[string] name (todo)
 			[RECT] bounds
-			[11] shapeCount
-			Shapes:
-				[strokeNBits] stroke index
-				[fillNBits] fill index
+			
+			[11] pathCount
+			[5] pathCountNBits // bits required to express index of last path
+			Paths (pathCount many): // order is index. All symbols have independant zero indexed paths
 				[5] segDataNBits
 				[11] segCount
 				[
 					[2] segType (0-moveTo 1-lineTo 2-quadraticTo 3-cubicTo
 					[segDataNBits * points] (move-2pts line-2pts quadratic-4pts cubic-6pts)
 				]
+			
+			[11] shapeCount // shapes may reuse paths, so count may be greater than pathCount
+			Shapes (shapeCount many):
+				[strokeNBits] stroke index
+				[fillNBits] fill index
+				[pathCountNBits] path index // index is always based on current symbol, from paths above
 			
 			
 0x11	TimelineDefinition

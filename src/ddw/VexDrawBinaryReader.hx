@@ -187,18 +187,15 @@ class VexDrawBinaryReader
 	{	
 		var result:Symbol = new Symbol();
 		result.id = readNBits(32);
-		
-		// todo: name
 				
 		result.bounds = readNBitRect();
 		
-		var shapesCount:Int = readNBits(11);	
-		for (i in 0...shapesCount)
-		{
-			var strokeIndex:Int = readNBits(strokeIndexNBits);	
-			var fillIndex:Int = readNBits(fillIndexNBits);		
-			var shape:Shape = new Shape(strokeIndex, fillIndex);
-			
+		// parse paths
+		var pathsCount:Int = readNBits(11);
+		var pathIndexNBits:Int = readNBits(5);
+		for (i in 0...pathsCount)
+		{						
+			var path:Path = new Path();
 			var nBits:Int = readNBitValue();
 			var segmentCount:Int = readNBits(11);			
 			for (j in 0...segmentCount)
@@ -225,8 +222,20 @@ class VexDrawBinaryReader
 						seg.points.push(readNBitInt(nBits) / twips);		
 						seg.points.push(readNBitInt(nBits) / twips);
 				}
-				shape.segments.push(seg);
+				path.segments.push(seg);
 			}
+			result.paths.push(path);
+		}
+		
+		// parse shapes
+		var shapesCount:Int = readNBits(11);	
+		for (i in 0...shapesCount)
+		{
+			var strokeIndex:Int = readNBits(strokeIndexNBits);	
+			var fillIndex:Int = readNBits(fillIndexNBits);	
+			var pathIndex:Int = readNBits(pathIndexNBits);
+			
+			var shape:Shape = new Shape(strokeIndex, fillIndex, pathIndex);
 			result.shapes.push(shape);
 		}
 		
