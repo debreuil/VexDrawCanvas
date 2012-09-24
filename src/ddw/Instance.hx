@@ -57,9 +57,18 @@ class Instance
 					Symbol.drawSymbol(symbol, inst, vo);
 				}
 			}
+			else if(Std.is(def, ddw.Image))
+			{
+				var img:ddw.Image = cast(vo.definitions.get(def.id), ddw.Image);
+				var bnds:Rectangle = img.bounds;
+				offsetX = -bnds.x * inst.scaleX;
+				offsetY = -bnds.y * inst.scaleY;
+				
+				ddw.Image.drawImage(img, inst, vo);
+			}
 			else
 			{
-				// doesn't normally happen
+				// shouldn't normally happen, symbols are wraped in single element timelines
 				Symbol.drawSymbol(cast(def, Symbol), inst, vo);
 			}
 		}

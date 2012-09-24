@@ -55,6 +55,14 @@ class VexDrawJsonReader
 			}
 		}
 		
+		// images	
+		var dImages:Array<Dynamic> = cast data.images;
+		for(dImage in dImages)
+		{			
+			var img:Image = parseImage(dImage);			
+			vo.definitions.set(img.id, img);	
+		}
+		
 		// symbols	
 		var dSymbols:Array<Dynamic> = cast data.symbols;
 		for(dSymbol in dSymbols)
@@ -109,6 +117,15 @@ class VexDrawJsonReader
 		
 		return result;
 	}
+	
+	public function parseImage(dimg:Dynamic):Image
+	{		
+		var img:Image = new Image();
+		img.id = dimg.id;
+		img.bounds = new Rectangle(dimg.sourceRectangle[0], dimg.sourceRectangle[1], dimg.sourceRectangle[2], dimg.sourceRectangle[3]);
+		img.setPath(dimg.path);
+		return img;
+	}		
 	
 	public function parseSymbol(dsym:Dynamic):Symbol
 	{		

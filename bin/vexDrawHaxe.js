@@ -334,6 +334,53 @@ ddw.GradientFill.prototype = $extend(ddw.Fill.prototype,{
 	}
 	,__class__: ddw.GradientFill
 });
+ddw.Image = function() {
+	ddw.Definition.call(this);
+	this.isTimeline = false;
+	this.pendingDraws = new Array();
+};
+ddw.Image.__name__ = true;
+ddw.Image.drawImage = function(img,metrics,vo) {
+	var bnds = img.bounds;
+	var offsetX = -bnds.x * metrics.scaleX;
+	var offsetY = -bnds.y * metrics.scaleY;
+	var cv = vo.createCanvas(metrics.name,bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
+	var g = cv.getContext("2d");
+	img.draw(g,metrics);
+}
+ddw.Image.__super__ = ddw.Definition;
+ddw.Image.prototype = $extend(ddw.Definition.prototype,{
+	drawPending: function() {
+		if(this.isLoaded) {
+			var _g = 0, _g1 = this.pendingDraws;
+			while(_g < _g1.length) {
+				var idd = _g1[_g];
+				++_g;
+				this.draw(idd.g,idd.metrics);
+			}
+		}
+		this.pendingDraws = new Array();
+	}
+	,draw: function(g,metrics) {
+		if(this.isLoaded) g.drawImage(this.img,0,0,metrics.scaleX * this.bounds.width,metrics.scaleY * this.bounds.height); else {
+			var idd = { g : g, metrics : metrics};
+			this.pendingDraws.push(idd);
+		}
+	}
+	,setPath: function(p) {
+		var _g = this;
+		this.isLoaded = false;
+		this.path = p;
+		var doc = js.Lib.document;
+		this.img = doc.createElement("img");
+		this.img.onload = function(_) {
+			_g.isLoaded = true;
+			_g.drawPending();
+		};
+		this.img.src = p;
+	}
+	,__class__: ddw.Image
+});
 ddw.Instance = function(defId) {
 	this.hasShear = false;
 	this.hasRotation = false;
@@ -364,6 +411,12 @@ ddw.Instance.drawInstance = function(inst,vo) {
 				offsetY = -bnds.y * inst.scaleY;
 				ddw.Symbol.drawSymbol(symbol,inst,vo);
 			}
+		} else if(js.Boot.__instanceof(def,ddw.Image)) {
+			var img = js.Boot.__cast(vo.definitions.get(def.id) , ddw.Image);
+			var bnds = img.bounds;
+			offsetX = -bnds.x * inst.scaleX;
+			offsetY = -bnds.y * inst.scaleY;
+			ddw.Image.drawImage(img,inst,vo);
 		} else ddw.Symbol.drawSymbol(js.Boot.__cast(def , ddw.Symbol),inst,vo);
 	}
 	vo.transformObject(div,inst,offsetX,offsetY);
@@ -752,44 +805,42 @@ ddw.VexDrawBinaryReader.prototype = {
 	,parseTags: function(vo) {
 		this.index = 0;
 		this.bit = 8;
-		try {
-			while(this.index < this.data.length) {
-				var tag = this.data[this.index++];
-				var len = this.readNBitInt(24);
-				var startLoc = this.index;
-				switch(tag) {
-				case 32:
-					this.parseNameTable(vo.definitionNameTable);
-					break;
-				case 33:
-					this.parseNameTable(vo.instanceNameTable);
-					break;
-				case 5:
-					this.parseStrokes(vo);
-					break;
-				case 6:
-					this.parseSolidFills(vo);
-					break;
-				case 7:
-					this.parseGradientFills(vo);
-					break;
-				case 16:
-					var symbol = this.parseSymbol(vo);
-					vo.definitions.set(symbol.id,symbol);
-					break;
-				case 17:
-					var tl = this.parseTimeline(vo);
-					vo.definitions.set(tl.id,tl);
-					break;
-				case 255:
-					throw "__break__";
-					break;
-				default:
-					this.index += len;
-				}
-				if(this.index - startLoc != len) js.Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + this.index + " len:" + len + " tagType: " + tag);
+		while(this.index < this.data.length) {
+			var tag = this.data[this.index++];
+			var len = this.readNBitInt(24);
+			var startLoc = this.index;
+			switch(tag) {
+			case 32:
+				this.parseNameTable(vo.definitionNameTable);
+				break;
+			case 33:
+				this.parseNameTable(vo.instanceNameTable);
+				break;
+			case 5:
+				this.parseStrokes(vo);
+				break;
+			case 6:
+				this.parseSolidFills(vo);
+				break;
+			case 7:
+				this.parseGradientFills(vo);
+				break;
+			case 16:
+				var symbol = this.parseSymbol(vo);
+				vo.definitions.set(symbol.id,symbol);
+				break;
+			case 17:
+				var tl = this.parseTimeline(vo);
+				vo.definitions.set(tl.id,tl);
+				break;
+			case 255:
+				this.index += 0;
+				break;
+			default:
+				this.index += len;
 			}
-		} catch( e ) { if( e != "__break__" ) throw e; }
+			if(this.index - startLoc != len) js.Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + this.index + " len:" + len + " tagType: " + tag);
+		}
 	}
 	,__class__: ddw.VexDrawBinaryReader
 }
@@ -897,6 +948,13 @@ ddw.VexDrawJsonReader.prototype = {
 		}
 		return symbol;
 	}
+	,parseImage: function(dimg) {
+		var img = new ddw.Image();
+		img.id = dimg.id;
+		img.bounds = new ddw.Rectangle(dimg.sourceRectangle[0],dimg.sourceRectangle[1],dimg.sourceRectangle[2],dimg.sourceRectangle[3]);
+		img.setPath(dimg.path);
+		return img;
+	}
 	,parseTimeline: function(dtl) {
 		var result = new ddw.Timeline();
 		result.isTimeline = true;
@@ -945,6 +1003,14 @@ ddw.VexDrawJsonReader.prototype = {
 			var f = this.parseFill(dFill,g);
 			vo.fills.push(f);
 			if(!f.isGradient) vo.gradientStart = i + 1;
+		}
+		var dImages = data.images;
+		var _g = 0;
+		while(_g < dImages.length) {
+			var dImage = dImages[_g];
+			++_g;
+			var img = this.parseImage(dImage);
+			vo.definitions.set(img.id,img);
 		}
 		var dSymbols = data.symbols;
 		var _g = 0;
@@ -1380,4 +1446,4 @@ ddw.VexDrawTag.PathNameTable = 35;
 ddw.VexDrawTag.End = 255;
 Main.main();
 
-//@ sourceMappingURL=TestJS2.js.map
+//@ sourceMappingURL=vexDrawHaxe.js.map

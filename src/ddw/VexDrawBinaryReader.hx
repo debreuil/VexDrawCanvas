@@ -79,8 +79,8 @@ class VexDrawBinaryReader
 					var tl:Timeline = parseTimeline(vo);
 					vo.definitions.set(tl.id, tl);	
 					
-				case VexDrawTag.End:		
-					break;		
+				case VexDrawTag.End:
+					index += 0;	// not sure how to have a do nothing without fall through?
 					
 				default:
 					index += len;
