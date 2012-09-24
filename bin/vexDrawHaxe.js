@@ -596,14 +596,13 @@ ddw.VexDrawBinaryReader.prototype = {
 		return result;
 	}
 	,readNBitRect: function() {
-		var nBits = this.readNBitValue();
+		var nBits = this.readNBitCount();
 		var result = new ddw.Rectangle(this.readNBitInt(nBits) / this.twips,this.readNBitInt(nBits) / this.twips,this.readNBitInt(nBits) / this.twips,this.readNBitInt(nBits) / this.twips);
 		return result;
 	}
-	,readNBitValue: function() {
+	,readNBitCount: function() {
 		var result = this.readNBits(5);
-		result = result == 0?0:result + 2;
-		return result;
+		return result + 2;
 	}
 	,readBit: function() {
 		return this.readNBits(1) == 1?true:false;
@@ -620,8 +619,8 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,parseStrokes: function(vo) {
 		this.strokeIndexNBits = this.readNBits(8);
-		var colorNBits = this.readNBitValue();
-		var lineWidthNBits = this.readNBitValue();
+		var colorNBits = this.readNBitCount();
+		var lineWidthNBits = this.readNBitCount();
 		var count = this.readNBits(11);
 		var _g = 0;
 		while(_g < count) {
@@ -635,7 +634,7 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,parseSolidFills: function(vo) {
 		this.fillIndexNBits = this.readNBits(8);
-		var nBits = this.readNBitValue();
+		var nBits = this.readNBitCount();
 		var count = this.readNBits(11);
 		var _g = 0;
 		while(_g < count) {
@@ -649,13 +648,13 @@ ddw.VexDrawBinaryReader.prototype = {
 	,parseGradientFills: function(vo) {
 		var cv = js.Lib.document.createElement("canvas");
 		var g = cv.getContext("2d");
-		var padding = this.readNBitValue();
+		var padding = this.readNBitCount();
 		var gradientCount = this.readNBits(11);
 		var _g = 0;
 		while(_g < gradientCount) {
 			var gc = _g++;
 			var type = this.readNBits(3);
-			var lineNBits = this.readNBitValue();
+			var lineNBits = this.readNBitCount();
 			var tlX = this.readNBitInt(lineNBits) / this.twips;
 			var tlY = this.readNBitInt(lineNBits) / this.twips;
 			var trX = this.readNBitInt(lineNBits) / this.twips;
@@ -665,8 +664,8 @@ ddw.VexDrawBinaryReader.prototype = {
 				var r2 = trX - tlX;
 				gradient = g.createRadialGradient(tlX,tlY,0,tlX,tlY,r2);
 			}
-			var colorNBits = this.readNBitValue();
-			var ratioNBits = this.readNBitValue();
+			var colorNBits = this.readNBitCount();
+			var ratioNBits = this.readNBitCount();
 			var count = this.readNBits(11);
 			var _g1 = 0;
 			while(_g1 < count) {
@@ -686,12 +685,12 @@ ddw.VexDrawBinaryReader.prototype = {
 		result.id = this.readNBits(32);
 		result.bounds = this.readNBitRect();
 		var pathsCount = this.readNBits(11);
-		var pathIndexNBits = this.readNBits(5);
+		var pathIndexNBits = this.readNBitCount();
 		var _g = 0;
 		while(_g < pathsCount) {
 			var i = _g++;
 			var path = new ddw.Path();
-			var nBits = this.readNBitValue();
+			var nBits = this.readNBitCount();
 			var segmentCount = this.readNBits(11);
 			var _g1 = 0;
 			while(_g1 < segmentCount) {
@@ -737,6 +736,15 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.flushBits();
 		return result;
 	}
+	,parseImage: function(vo) {
+		var result = new ddw.Image();
+		result.id = this.readNBits(32);
+		result.bounds = this.readNBitRect();
+		result.pathId = this.readNBits(11);
+		result.setPath(vo.pathTable[result.pathId]);
+		this.flushBits();
+		return result;
+	}
 	,parseTimeline: function(vo) {
 		var result = new ddw.Timeline();
 		result.id = this.readNBits(32);
@@ -755,7 +763,7 @@ ddw.VexDrawBinaryReader.prototype = {
 			var hasShear = this.readNBits(1) == 1?true:false;
 			var hasName = this.readNBits(1) == 1?true:false;
 			if(hasX || hasY || hasScaleX || hasScaleY || hasRotation || hasShear) {
-				var mxNBits = this.readNBitValue();
+				var mxNBits = this.readNBitCount();
 				if(hasX) inst.x = this.readNBitInt(mxNBits) / this.twips;
 				if(hasY) inst.y = this.readNBitInt(mxNBits) / this.twips;
 				if(hasScaleX) {
@@ -782,20 +790,38 @@ ddw.VexDrawBinaryReader.prototype = {
 		this.flushBits();
 		return result;
 	}
-	,parseNameTable: function(table) {
-		var idNBits = this.readNBits(5);
-		var nameNBits = this.readNBits(5);
-		var stringCount = this.readNBits(11);
+	,parseStringTable: function(table) {
+		var nameNBits = this.readNBitCount();
+		var stringCount = this.readNBits(16);
 		var _g = 0;
 		while(_g < stringCount) {
 			var i = _g++;
-			var id = this.readNBitInt(idNBits);
-			var charCount = this.readNBits(11);
+			var charCount = this.readNBits(16);
 			var s = "";
 			var _g1 = 0;
 			while(_g1 < charCount) {
 				var j = _g1++;
-				var charVal = this.readNBitInt(nameNBits);
+				var charVal = this.readNBits(nameNBits);
+				s += String.fromCharCode(charVal);
+			}
+			table.push(s);
+		}
+		this.flushBits();
+	}
+	,parseNameTable: function(table) {
+		var idNBits = this.readNBitCount();
+		var nameNBits = this.readNBitCount();
+		var stringCount = this.readNBits(16);
+		var _g = 0;
+		while(_g < stringCount) {
+			var i = _g++;
+			var id = this.readNBitInt(idNBits);
+			var charCount = this.readNBits(16);
+			var s = "";
+			var _g1 = 0;
+			while(_g1 < charCount) {
+				var j = _g1++;
+				var charVal = this.readNBits(nameNBits);
 				s += String.fromCharCode(charVal);
 			}
 			table.set(id,s);
@@ -816,6 +842,9 @@ ddw.VexDrawBinaryReader.prototype = {
 			case 33:
 				this.parseNameTable(vo.instanceNameTable);
 				break;
+			case 35:
+				this.parseStringTable(vo.pathTable);
+				break;
 			case 5:
 				this.parseStrokes(vo);
 				break;
@@ -833,13 +862,20 @@ ddw.VexDrawBinaryReader.prototype = {
 				var tl = this.parseTimeline(vo);
 				vo.definitions.set(tl.id,tl);
 				break;
+			case 18:
+				var img = this.parseImage(vo);
+				vo.definitions.set(img.id,img);
+				break;
 			case 255:
 				this.index += 0;
 				break;
 			default:
 				this.index += len;
 			}
-			if(this.index - startLoc != len) js.Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + this.index + " len:" + len + " tagType: " + tag);
+			if(this.index - startLoc != len) {
+				js.Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + this.index + " len:" + len + " tagType: " + tag);
+				this.index = startLoc + len;
+			}
 		}
 	}
 	,__class__: ddw.VexDrawBinaryReader
@@ -1042,6 +1078,7 @@ ddw.VexObject = function() {
 	this.strokes = new Array();
 	this.definitionNameTable = new IntHash();
 	this.instanceNameTable = new IntHash();
+	this.pathTable = new Array();
 	this.definitions = new IntHash();
 	this.timelineStack = new Array();
 	this.timelineStack.push(document.body);
@@ -1439,6 +1476,7 @@ ddw.VexDrawTag.ReplacementGradientFillList = 10;
 ddw.VexDrawTag.ReplacementStrokeList = 11;
 ddw.VexDrawTag.SymbolDefinition = 16;
 ddw.VexDrawTag.TimelineDefinition = 17;
+ddw.VexDrawTag.ImageDefinition = 18;
 ddw.VexDrawTag.DefinitionNameTable = 32;
 ddw.VexDrawTag.InstanceNameTable = 33;
 ddw.VexDrawTag.ColorNameTable = 34;

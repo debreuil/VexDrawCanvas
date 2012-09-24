@@ -10,6 +10,7 @@ class VexObject
 	
 	public var definitionNameTable:IntHash<String>;
 	public var instanceNameTable:IntHash<String>;
+	public var pathTable:Array<String>;
 	
 	public var definitions:IntHash<Definition>;
 	
@@ -25,6 +26,7 @@ class VexObject
 		this.strokes = new Array<Stroke>();
 		this.definitionNameTable = new IntHash<String>();
 		this.instanceNameTable = new IntHash<String>();
+		this.pathTable = new Array<String>();
 		
 		this.definitions = new IntHash<Definition>();
 		

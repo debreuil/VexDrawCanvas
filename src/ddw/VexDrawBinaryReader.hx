@@ -53,7 +53,7 @@ class VexDrawBinaryReader
 			var tag:Int = readByte();
 			var len:Int = readNBitInt(24);
 			var startLoc:Int = index;
-			
+
 			switch(tag)
 			{
 				case VexDrawTag.DefinitionNameTable:
@@ -61,6 +61,9 @@ class VexDrawBinaryReader
 					
 				case VexDrawTag.InstanceNameTable:
 					parseNameTable(vo.instanceNameTable);
+					
+				case VexDrawTag.PathNameTable:
+					parseStringTable(vo.pathTable);
 					
 				case VexDrawTag.StrokeList:
 					parseStrokes(vo);
@@ -79,6 +82,10 @@ class VexDrawBinaryReader
 					var tl:Timeline = parseTimeline(vo);
 					vo.definitions.set(tl.id, tl);	
 					
+				case VexDrawTag.ImageDefinition:
+					var img:ddw.Image = parseImage(vo);
+					vo.definitions.set(img.id, img);	
+					
 				case VexDrawTag.End:
 					index += 0;	// not sure how to have a do nothing without fall through?
 					
@@ -89,28 +96,49 @@ class VexDrawBinaryReader
 			if (index - startLoc != len)
 			{
 				Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + index + " len:" + len + " tagType: " + tag);
+				index = startLoc + len;
 			}
 		}	
 	}
 	
 	private function parseNameTable(table:IntHash<String>):Void
 	{	
-		var idNBits:Int = readNBits(5);
-		var nameNBits:Int = readNBits(5);
-		var stringCount:Int = readNBits(11);
+		var idNBits:Int = readNBitCount();
+		var nameNBits:Int = readNBitCount();
+		var stringCount:Int = readNBits(16);
 		
 		for (i in 0...stringCount)
 		{
 			var id:Int = readNBitInt(idNBits);
-			var charCount:Int = readNBits(11);
+			var charCount:Int = readNBits(16);
 			var s:String = "";
 			for (j in 0...charCount)
 			{
-				var charVal:Int = readNBitInt(nameNBits);
+				var charVal:Int = readNBits(nameNBits);
 				s += String.fromCharCode(charVal);
 			}
 			
 			table.set(id, s);
+		}		
+		
+		flushBits();		
+	}
+	private function parseStringTable(table:Array<String>):Void
+	{	
+		var nameNBits:Int = readNBitCount();
+		var stringCount:Int = readNBits(16);
+		
+		for (i in 0...stringCount)
+		{
+			var charCount:Int = readNBits(16);
+			var s:String = "";
+			for (j in 0...charCount)
+			{
+				var charVal:Int = readNBits(nameNBits);
+				s += String.fromCharCode(charVal);
+			}
+			
+			table.push(s);
 		}		
 		
 		flushBits();		
@@ -139,7 +167,7 @@ class VexDrawBinaryReader
 			
 			if (hasX || hasY || hasScaleX || hasScaleY || hasRotation || hasShear)
 			{				
-				var mxNBits:Int = readNBitValue();
+				var mxNBits:Int = readNBitCount();
 				if (hasX)
 				{
 					inst.x = readNBitInt(mxNBits) / twips;
@@ -183,6 +211,19 @@ class VexDrawBinaryReader
 		return result;
 	}
 	
+	private function parseImage(vo:VexObject):ddw.Image
+	{	
+		var result:ddw.Image = new ddw.Image();
+		result.id = readNBits(32);				
+		result.bounds = readNBitRect();
+		result.pathId = readNBits(11);	
+		result.setPath(vo.pathTable[result.pathId]);
+		
+		flushBits();
+		
+		return result;
+	}
+	
 	private function parseSymbol(vo:VexObject):Symbol
 	{	
 		var result:Symbol = new Symbol();
@@ -192,11 +233,11 @@ class VexDrawBinaryReader
 		
 		// parse paths
 		var pathsCount:Int = readNBits(11);
-		var pathIndexNBits:Int = readNBits(5);
+		var pathIndexNBits:Int = readNBitCount();
 		for (i in 0...pathsCount)
 		{						
 			var path:Path = new Path();
-			var nBits:Int = readNBitValue();
+			var nBits:Int = readNBitCount();
 			var segmentCount:Int = readNBits(11);			
 			for (j in 0...segmentCount)
 			{
@@ -248,7 +289,7 @@ class VexDrawBinaryReader
 		var cv:HTMLCanvasElement = cast Lib.document.createElement('canvas');
 		var g:CanvasRenderingContext2D = cv.getContext("2d");	
 		
-		var padding:Int = readNBitValue();
+		var padding:Int = readNBitCount();
 		var gradientCount:Int = readNBits(11);		
 		for (gc in 0...gradientCount)
 		{
@@ -256,7 +297,7 @@ class VexDrawBinaryReader
 			
 			var type:Int = readNBits(3);
 			
-			var lineNBits:Int = readNBitValue();
+			var lineNBits:Int = readNBitCount();
 			var tlX:Float = readNBitInt(lineNBits) / twips;
 			var tlY:Float = readNBitInt(lineNBits) / twips;
 			var trX:Float = readNBitInt(lineNBits) / twips;
@@ -278,8 +319,8 @@ class VexDrawBinaryReader
 			}
 			
 			// stop colors
-			var colorNBits:Int = readNBitValue();
-			var ratioNBits:Int = readNBitValue();
+			var colorNBits:Int = readNBitCount();
+			var ratioNBits:Int = readNBitCount();
 			var count:Int = readNBits(11);				
 			for (stops in 0...count)
 			{
@@ -300,7 +341,7 @@ class VexDrawBinaryReader
 	private function parseSolidFills(vo:VexObject):Void
 	{	
 		fillIndexNBits = readNBits(8);
-		var nBits:Int = readNBitValue();
+		var nBits:Int = readNBitCount();
 		var count:Int = readNBits(11);		
 		for (i in 0...count)
 		{
@@ -314,8 +355,8 @@ class VexDrawBinaryReader
 	{		
 		strokeIndexNBits = readNBits(8);
 		// stroke colors
-		var colorNBits:Int = readNBitValue();
-		var lineWidthNBits = readNBitValue();
+		var colorNBits:Int = readNBitCount();
+		var lineWidthNBits = readNBitCount();
 		var count:Int = readNBits(11);		
 		for (i in 0...count)
 		{
@@ -349,15 +390,14 @@ class VexDrawBinaryReader
 		return readNBits(1) == 1 ? true : false;
 	}
 	
-	private function readNBitValue() : Int
+	private function readNBitCount() : Int
 	{
 		var result:Int = readNBits(5);
-		result = (result == 0) ? 0 : result + 2;	
-		return result;
+		return result + 2;
 	}
 	private function readNBitRect() : Rectangle
 	{
-		var nBits:Int = readNBitValue();
+		var nBits:Int = readNBitCount();
 		var result = new Rectangle
 		(
 			readNBitInt(nBits) / twips,

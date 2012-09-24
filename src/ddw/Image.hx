@@ -13,6 +13,7 @@ typedef ImageDrawData =
 class Image extends Definition
 {
     private var path:String;
+    public var pathId:Int;
 	
 	private var img:HTMLImageElement;	
 	private var isLoaded:Bool;

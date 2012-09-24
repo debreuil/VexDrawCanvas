@@ -16,6 +16,7 @@ class VexDrawTag
 	
 	public inline static var SymbolDefinition:Int				= 0x10;
 	public inline static var TimelineDefinition:Int				= 0x11;
+	public inline static var ImageDefinition:Int				= 0x12;
 	
     public inline static var DefinitionNameTable:Int            = 0x20;
     public inline static var InstanceNameTable:Int              = 0x21;
