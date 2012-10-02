@@ -16,6 +16,7 @@ class VexDrawBinaryReader
 	private var strokeIndexNBits:Int;
 	
 	private var twips:Int = 32;
+	private var idBitCount:Int = 16;
 	private var maskArray:Array<Int>;
 		
 	public function new(path:String, vo:VexObject, onParseComplete:Dynamic = null)
@@ -57,10 +58,10 @@ class VexDrawBinaryReader
 			switch(tag)
 			{
 				case VexDrawTag.DefinitionNameTable:
-					parseNameTable(vo.definitionNameTable);
+					parseNameTable(vo.definitionNameTable, null);
 					
 				case VexDrawTag.InstanceNameTable:
-					parseNameTable(vo.instanceNameTable);
+					parseNameTable(null, vo.instanceNameLookupTable);
 					
 				case VexDrawTag.PathNameTable:
 					parseStringTable(vo.pathTable);
@@ -98,18 +99,33 @@ class VexDrawBinaryReader
 				Lib.alert("Parse error. tagStart:" + startLoc + " tagEnd:" + index + " len:" + len + " tagType: " + tag);
 				index = startLoc + len;
 			}
-		}	
+		}
+		
+		mapNames(vo);
 	}
 	
-	private function parseNameTable(table:IntHash<String>):Void
+	private function mapNames(vo:VexObject):Void
 	{	
-		var idNBits:Int = readNBitCount();
+		for (s in vo.definitionNameTable.keys()) 
+		{
+			var id:Int = vo.definitionNameTable.get(s);
+			var def:Definition = vo.definitions.get(id);
+			
+			if (Std.is(def, Timeline))
+			{				
+				var tl:Timeline = cast(def, Timeline);
+				tl.name = s;
+			}
+		}
+	}
+	private function parseNameTable(table:Hash<Int>, lookupTable:IntHash<String>):Void
+	{	
 		var nameNBits:Int = readNBitCount();
 		var stringCount:Int = readNBits(16);
 		
 		for (i in 0...stringCount)
 		{
-			var id:Int = readNBitInt(idNBits);
+			var id:Int = readNBitInt(idBitCount);
 			var charCount:Int = readNBits(16);
 			var s:String = "";
 			for (j in 0...charCount)
@@ -118,7 +134,15 @@ class VexDrawBinaryReader
 				s += String.fromCharCode(charVal);
 			}
 			
-			table.set(id, s);
+			if (table != null)
+			{
+				table.set(s, id);
+			}
+			
+			if (lookupTable != null)
+			{
+				lookupTable.set(id, s);
+			}
 		}		
 		
 		flushBits();		
@@ -146,7 +170,7 @@ class VexDrawBinaryReader
 	private function parseTimeline(vo:VexObject):Timeline
 	{	
 		var result:Timeline = new Timeline();
-		result.id = readNBits(32);
+		result.id = readNBits(idBitCount);
 				
 		result.bounds = readNBitRect();
 		
@@ -154,8 +178,10 @@ class VexDrawBinaryReader
 		for (i in 0...instancesCount)
 		{
 			// defid32,hasVals[7:bool], x?,y?,scaleX?, scaleY?, rotation?, shear?, "name"?
-			var defId:Int = readNBits(32);
-			var inst:Instance = new Instance(defId);
+			var defId:Int = readNBits(idBitCount);
+			var instId:Int = readNBits(idBitCount);
+			var inst:Instance = new Instance(defId, instId);
+			inst.instanceId = instId;
 			
 			var hasX:Bool = readBit();
 			var hasY:Bool = readBit();
@@ -198,9 +224,9 @@ class VexDrawBinaryReader
 				}
 			}
 			
-			if (hasName)
+			if (hasName && vo.instanceNameLookupTable.exists(inst.instanceId))
 			{
-				// todo: read name
+				inst.name = vo.instanceNameLookupTable.get(inst.instanceId);
 			}
 			
 			result.instances.push(inst);
@@ -214,7 +240,7 @@ class VexDrawBinaryReader
 	private function parseImage(vo:VexObject):ddw.Image
 	{	
 		var result:ddw.Image = new ddw.Image();
-		result.id = readNBits(32);				
+		result.id = readNBits(idBitCount);				
 		result.bounds = readNBitRect();
 		result.pathId = readNBits(11);	
 		result.setPath(vo.pathTable[result.pathId]);
@@ -227,7 +253,7 @@ class VexDrawBinaryReader
 	private function parseSymbol(vo:VexObject):Symbol
 	{	
 		var result:Symbol = new Symbol();
-		result.id = readNBits(32);
+		result.id = readNBits(idBitCount);
 				
 		result.bounds = readNBitRect();
 		

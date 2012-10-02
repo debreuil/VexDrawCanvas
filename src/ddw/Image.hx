@@ -71,7 +71,9 @@ class Image extends Definition
 		var offsetX:Float = -bnds.x * metrics.scaleX;
 		var offsetY:Float = -bnds.y * metrics.scaleY;
 		
-		var cv:HTMLCanvasElement = vo.createCanvas(metrics.name, cast (bnds.width * metrics.scaleX), cast (bnds.height * metrics.scaleY));
+		var divId:String = (metrics.name == null || metrics.name == "") ? "cv_" + metrics.instanceId : "cv_" + metrics.name;
+		
+		var cv:HTMLCanvasElement = vo.createCanvas(divId, cast (bnds.width * metrics.scaleX), cast (bnds.height * metrics.scaleY));
 		//vo.transformObject(cv, metrics, offsetX, offsetY);			
 		var g:CanvasRenderingContext2D = cv.getContext("2d");	
 		

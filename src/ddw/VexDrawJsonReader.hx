@@ -17,18 +17,18 @@ class VexDrawJsonReader
 	
 	public function parseJson(data:Dynamic, vo:VexObject, onParseComplete:Dynamic = null)
 	{		
-		// definition name table
+		// definition name table is <string, int>
 		var dDefNames:Array<Dynamic> = cast data.definitionNameTable;
 		for(def in dDefNames)
 		{			
-			vo.definitionNameTable.set(def[0], def[1]);	
+			vo.definitionNameTable.set(def[1], def[0]);	
 		}
 		
-		// instance name table
+		// instance name table is <int, string>
 		var dInstNames:Array<Dynamic> = cast data.instanceNameTable;
 		for(inst in dInstNames)
 		{
-			vo.instanceNameTable.set(inst[0], inst[1]);
+			vo.instanceNameLookupTable.set(inst[0], inst[1]);
 		}
 		
 		// strokes
@@ -83,7 +83,7 @@ class VexDrawJsonReader
 			
 			if(tl.name != null)
 			{
-				vo.definitionNameTable.set(tl.id, tl.name);	
+				vo.definitionNameTable.set(tl.name, tl.id);	
 			}	
 		}
 		
@@ -160,14 +160,14 @@ class VexDrawJsonReader
 	public static function parseInstance(dinst:Dynamic):Instance
 	{
 		// [id,[x,y],[scaleX, scaleY, rotation*, skew*], "name"]
-		var result:Instance = new Instance(dinst[0]);				
+		var result:Instance = new Instance(dinst[0],dinst[1]);				
 		
-		result.x = dinst[1][0];
-		result.y = dinst[1][1];
+		result.x = dinst[2][0];
+		result.y = dinst[2][1];
 		
-		if(dinst.length > 2 && !Std.is(dinst[2], String))
+		if(dinst.length > 3 && !Std.is(dinst[3], String))
 		{
-			var mxComp:Array<Float> = dinst[2];
+			var mxComp:Array<Float> = dinst[3];
 			
 			result.scaleX = mxComp[0];
 			result.scaleY = mxComp[1];
@@ -186,13 +186,13 @@ class VexDrawJsonReader
 			}
 		}			
 
-		if(dinst.length > 3)
+		if(dinst.length > 4)
+		{
+			result.name = dinst[4];
+		}
+		else if(dinst.length > 3 && Std.is(dinst[3], String))
 		{
 			result.name = dinst[3];
-		}
-		else if(dinst.length > 2 && Std.is(dinst[2], String))
-		{
-			result.name = dinst[2];
 		}
 		else
 		{

@@ -19,11 +19,10 @@ Tag		Description
 0x01	Header // todo
 
 0x20	DefinitionNameTable
-			[5] nBits for idIndex
 			[5] nBits required for string character
 			[16] number of entries in table
 			entry:
-				[idIndexNBits] id
+				[16] id
 				[16] number of unicode characters in string
 				char:
 					[charNBits] unicode character value of current char
@@ -84,7 +83,7 @@ Tag		Description
 0x0B	ReplacementGradientFillList // todo
 		
 0x10	SymbolDefinition:		
-			[32] symbol id
+			[16] symbol id
 			[string] name (todo)
 			[RECT] bounds
 			
@@ -106,12 +105,13 @@ Tag		Description
 			
 			
 0x11	TimelineDefinition
-			[32] symbol id
+			[16] symbol id
 			[string] name (todo)
 			[RECT] bounds
 			[11] instanceCount
 			Instances:
-				[32] definition id
+				[16] definition id
+				[16] instance id
 				[1] hasValueTranslateX
 				[1] hasValueTranslateY
 				[1] hasValueScaleX
@@ -127,7 +127,7 @@ Tag		Description
 				[string] name (todo)
 
 0x11	ImageDefinition			
-			[32] symbol id
+			[16] symbol id
 			[string] name (todo)
 			[RECT] sourceRectangle	
 			[11] path id // index into PathNameTable (tag 0x23)

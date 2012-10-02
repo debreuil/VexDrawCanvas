@@ -23,16 +23,28 @@ class Instance
 	public static var instanceCounter:Int = 0;
 
 	
-	public function new(defId:Int) 
+	public function new(defId:Int, ?instId:Int) 
 	{	
 		this.definitionId = defId;
-		instanceId = instanceCounter++;
+		
+		if (instId == null)
+		{
+			instanceId = instanceCounter++;			
+		}
+		else
+		{
+			instanceId = instId;
+			if (instanceCounter <= instId)
+			{
+				instanceCounter = instId + 1;
+			}		
+		}
 	}
 		
 	public static function drawInstance(inst:Instance, vo:VexObject)
 	{				
-		var divClass:String = (inst.name == null || inst.name == "") ? "inst_" + inst.instanceId : inst.name;
-		var div:HTMLDivElement = vo.pushDiv(divClass);	
+		var divId:String = (inst.name == null || inst.name == "") ? "inst_" + inst.instanceId : inst.name;
+		var div:HTMLDivElement = vo.pushDiv(divId);	
 		var offsetX:Float = 0;
 		var offsetY:Float = 0;
 				

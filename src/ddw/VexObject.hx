@@ -8,8 +8,8 @@ class VexObject
 	public var fills:Array<Fill>;
 	public var strokes:Array<Stroke>;
 	
-	public var definitionNameTable:IntHash<String>;
-	public var instanceNameTable:IntHash<String>;
+	public var definitionNameTable:Hash<Int>;
+ 	public var instanceNameLookupTable:IntHash<String>;
 	public var pathTable:Array<String>;
 	
 	public var definitions:IntHash<Definition>;
@@ -24,8 +24,9 @@ class VexObject
 	{	
 		this.fills = new Array<Fill>();
 		this.strokes = new Array<Stroke>();
-		this.definitionNameTable = new IntHash<String>();
-		this.instanceNameTable = new IntHash<String>();
+		this.definitionNameTable = new Hash<Int>();
+		this.instanceNameLookupTable = new IntHash<String>();
+
 		this.pathTable = new Array<String>();
 		
 		this.definitions = new IntHash<Definition>();
@@ -103,6 +104,15 @@ class VexObject
 			untyped obj.style["msTransform"] = trans;
 			untyped obj.style["OTransform"] = trans;	
 			untyped obj.style['MozTransform'] = trans;
+		}
+	}
+	
+	public function drawTimelineByName(name:String)
+	{	
+		if (definitionNameTable.exists(name))
+		{
+			var id:Int = definitionNameTable.get(name);
+			drawTimeline(id);
 		}
 	}
 	

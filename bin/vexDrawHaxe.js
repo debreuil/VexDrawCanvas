@@ -16,6 +16,57 @@ MessagePort.__name__ = true;
 MessagePort.prototype = {
 	__class__: MessagePort
 }
+var Hash = function() {
+	this.h = { };
+};
+Hash.__name__ = true;
+Hash.prototype = {
+	toString: function() {
+		var s = new StringBuf();
+		s.b += Std.string("{");
+		var it = this.keys();
+		while( it.hasNext() ) {
+			var i = it.next();
+			s.b += Std.string(i);
+			s.b += Std.string(" => ");
+			s.b += Std.string(Std.string(this.get(i)));
+			if(it.hasNext()) s.b += Std.string(", ");
+		}
+		s.b += Std.string("}");
+		return s.b;
+	}
+	,iterator: function() {
+		return { ref : this.h, it : this.keys(), hasNext : function() {
+			return this.it.hasNext();
+		}, next : function() {
+			var i = this.it.next();
+			return this.ref["$" + i];
+		}};
+	}
+	,keys: function() {
+		var a = [];
+		for( var key in this.h ) {
+		if(this.h.hasOwnProperty(key)) a.push(key.substr(1));
+		}
+		return HxOverrides.iter(a);
+	}
+	,remove: function(key) {
+		key = "$" + key;
+		if(!this.h.hasOwnProperty(key)) return false;
+		delete(this.h[key]);
+		return true;
+	}
+	,exists: function(key) {
+		return this.h.hasOwnProperty("$" + key);
+	}
+	,get: function(key) {
+		return this.h["$" + key];
+	}
+	,set: function(key,value) {
+		this.h["$" + key] = value;
+	}
+	,__class__: Hash
+}
 var HxOverrides = function() { }
 HxOverrides.__name__ = true;
 HxOverrides.dateStr = function(date) {
@@ -344,7 +395,8 @@ ddw.Image.drawImage = function(img,metrics,vo) {
 	var bnds = img.bounds;
 	var offsetX = -bnds.x * metrics.scaleX;
 	var offsetY = -bnds.y * metrics.scaleY;
-	var cv = vo.createCanvas(metrics.name,bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
+	var divId = metrics.name == null || metrics.name == ""?"cv_" + metrics.instanceId:"cv_" + metrics.name;
+	var cv = vo.createCanvas(divId,bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
 	var g = cv.getContext("2d");
 	img.draw(g,metrics);
 }
@@ -381,7 +433,7 @@ ddw.Image.prototype = $extend(ddw.Definition.prototype,{
 	}
 	,__class__: ddw.Image
 });
-ddw.Instance = function(defId) {
+ddw.Instance = function(defId,instId) {
 	this.hasShear = false;
 	this.hasRotation = false;
 	this.hasScale = false;
@@ -392,12 +444,15 @@ ddw.Instance = function(defId) {
 	this.y = 0;
 	this.x = 0;
 	this.definitionId = defId;
-	this.instanceId = ddw.Instance.instanceCounter++;
+	if(instId == null) this.instanceId = ddw.Instance.instanceCounter++; else {
+		this.instanceId = instId;
+		if(ddw.Instance.instanceCounter <= instId) ddw.Instance.instanceCounter = instId + 1;
+	}
 };
 ddw.Instance.__name__ = true;
 ddw.Instance.drawInstance = function(inst,vo) {
-	var divClass = inst.name == null || inst.name == ""?"inst_" + inst.instanceId:inst.name;
-	var div = vo.pushDiv(divClass);
+	var divId = inst.name == null || inst.name == ""?"inst_" + inst.instanceId:inst.name;
+	var div = vo.pushDiv(divId);
 	var offsetX = 0;
 	var offsetY = 0;
 	var def = vo.definitions.get(inst.definitionId);
@@ -492,7 +547,8 @@ ddw.Symbol.drawSymbol = function(symbol,metrics,vo) {
 	var bnds = symbol.bounds;
 	var offsetX = -bnds.x * metrics.scaleX;
 	var offsetY = -bnds.y * metrics.scaleY;
-	var cv = vo.createCanvas(metrics.name,bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
+	var divId = metrics.name == null || metrics.name == ""?"cv_" + metrics.instanceId:"cv_" + metrics.name;
+	var cv = vo.createCanvas(divId,bnds.width * metrics.scaleX,bnds.height * metrics.scaleY);
 	var g = cv.getContext("2d");
 	g.translate(offsetX,offsetY);
 	if(metrics.hasScale) g.scale(metrics.scaleX,metrics.scaleY);
@@ -551,6 +607,7 @@ ddw.Timeline.prototype = $extend(ddw.Definition.prototype,{
 	__class__: ddw.Timeline
 });
 ddw.VexDrawBinaryReader = function(path,vo,onParseComplete) {
+	this.idBitCount = 16;
 	this.twips = 32;
 	var _g = this;
 	this.maskArray = [0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535,131071,262143,524287,1048575,2097151,4194303,8388607,16777215,33554431,67108863,134217727,268435455,536870911,1073741823,2147483647,-1];
@@ -682,7 +739,7 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,parseSymbol: function(vo) {
 		var result = new ddw.Symbol();
-		result.id = this.readNBits(32);
+		result.id = this.readNBits(this.idBitCount);
 		result.bounds = this.readNBitRect();
 		var pathsCount = this.readNBits(11);
 		var pathIndexNBits = this.readNBitCount();
@@ -738,7 +795,7 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,parseImage: function(vo) {
 		var result = new ddw.Image();
-		result.id = this.readNBits(32);
+		result.id = this.readNBits(this.idBitCount);
 		result.bounds = this.readNBitRect();
 		result.pathId = this.readNBits(11);
 		result.setPath(vo.pathTable[result.pathId]);
@@ -747,14 +804,16 @@ ddw.VexDrawBinaryReader.prototype = {
 	}
 	,parseTimeline: function(vo) {
 		var result = new ddw.Timeline();
-		result.id = this.readNBits(32);
+		result.id = this.readNBits(this.idBitCount);
 		result.bounds = this.readNBitRect();
 		var instancesCount = this.readNBits(11);
 		var _g = 0;
 		while(_g < instancesCount) {
 			var i = _g++;
-			var defId = this.readNBits(32);
-			var inst = new ddw.Instance(defId);
+			var defId = this.readNBits(this.idBitCount);
+			var instId = this.readNBits(this.idBitCount);
+			var inst = new ddw.Instance(defId,instId);
+			inst.instanceId = instId;
 			var hasX = this.readNBits(1) == 1?true:false;
 			var hasY = this.readNBits(1) == 1?true:false;
 			var hasScaleX = this.readNBits(1) == 1?true:false;
@@ -783,8 +842,7 @@ ddw.VexDrawBinaryReader.prototype = {
 					inst.hasShear = true;
 				}
 			}
-			if(hasName) {
-			}
+			if(hasName && vo.instanceNameLookupTable.exists(inst.instanceId)) inst.name = vo.instanceNameLookupTable.get(inst.instanceId);
 			result.instances.push(inst);
 		}
 		this.flushBits();
@@ -808,14 +866,13 @@ ddw.VexDrawBinaryReader.prototype = {
 		}
 		this.flushBits();
 	}
-	,parseNameTable: function(table) {
-		var idNBits = this.readNBitCount();
+	,parseNameTable: function(table,lookupTable) {
 		var nameNBits = this.readNBitCount();
 		var stringCount = this.readNBits(16);
 		var _g = 0;
 		while(_g < stringCount) {
 			var i = _g++;
-			var id = this.readNBitInt(idNBits);
+			var id = this.readNBitInt(this.idBitCount);
 			var charCount = this.readNBits(16);
 			var s = "";
 			var _g1 = 0;
@@ -824,9 +881,22 @@ ddw.VexDrawBinaryReader.prototype = {
 				var charVal = this.readNBits(nameNBits);
 				s += String.fromCharCode(charVal);
 			}
-			table.set(id,s);
+			if(table != null) table.set(s,id);
+			if(lookupTable != null) lookupTable.set(id,s);
 		}
 		this.flushBits();
+	}
+	,mapNames: function(vo) {
+		var $it0 = vo.definitionNameTable.keys();
+		while( $it0.hasNext() ) {
+			var s = $it0.next();
+			var id = vo.definitionNameTable.get(s);
+			var def = vo.definitions.get(id);
+			if(js.Boot.__instanceof(def,ddw.Timeline)) {
+				var tl = js.Boot.__cast(def , ddw.Timeline);
+				tl.name = s;
+			}
+		}
 	}
 	,parseTags: function(vo) {
 		this.index = 0;
@@ -837,10 +907,10 @@ ddw.VexDrawBinaryReader.prototype = {
 			var startLoc = this.index;
 			switch(tag) {
 			case 32:
-				this.parseNameTable(vo.definitionNameTable);
+				this.parseNameTable(vo.definitionNameTable,null);
 				break;
 			case 33:
-				this.parseNameTable(vo.instanceNameTable);
+				this.parseNameTable(null,vo.instanceNameLookupTable);
 				break;
 			case 35:
 				this.parseStringTable(vo.pathTable);
@@ -877,6 +947,7 @@ ddw.VexDrawBinaryReader.prototype = {
 				this.index = startLoc + len;
 			}
 		}
+		this.mapNames(vo);
 	}
 	,__class__: ddw.VexDrawBinaryReader
 }
@@ -886,11 +957,11 @@ ddw.VexDrawJsonReader = function(json,vo,onParseComplete) {
 };
 ddw.VexDrawJsonReader.__name__ = true;
 ddw.VexDrawJsonReader.parseInstance = function(dinst) {
-	var result = new ddw.Instance(dinst[0]);
-	result.x = dinst[1][0];
-	result.y = dinst[1][1];
-	if(dinst.length > 2 && !js.Boot.__instanceof(dinst[2],String)) {
-		var mxComp = dinst[2];
+	var result = new ddw.Instance(dinst[0],dinst[1]);
+	result.x = dinst[2][0];
+	result.y = dinst[2][1];
+	if(dinst.length > 3 && !js.Boot.__instanceof(dinst[3],String)) {
+		var mxComp = dinst[3];
 		result.scaleX = mxComp[0];
 		result.scaleY = mxComp[1];
 		result.hasScale = true;
@@ -903,7 +974,7 @@ ddw.VexDrawJsonReader.parseInstance = function(dinst) {
 			result.hasShear = true;
 		}
 	}
-	if(dinst.length > 3) result.name = dinst[3]; else if(dinst.length > 2 && js.Boot.__instanceof(dinst[2],String)) result.name = dinst[2]; else result.name = "inst_" + result.instanceId;
+	if(dinst.length > 4) result.name = dinst[4]; else if(dinst.length > 3 && js.Boot.__instanceof(dinst[3],String)) result.name = dinst[3]; else result.name = "inst_" + result.instanceId;
 	return result;
 }
 ddw.VexDrawJsonReader.parseSegment = function(seg) {
@@ -1013,14 +1084,14 @@ ddw.VexDrawJsonReader.prototype = {
 		while(_g < dDefNames.length) {
 			var def = dDefNames[_g];
 			++_g;
-			vo.definitionNameTable.set(def[0],def[1]);
+			vo.definitionNameTable.set(def[1],def[0]);
 		}
 		var dInstNames = data.instanceNameTable;
 		var _g = 0;
 		while(_g < dInstNames.length) {
 			var inst = dInstNames[_g];
 			++_g;
-			vo.instanceNameTable.set(inst[0],inst[1]);
+			vo.instanceNameLookupTable.set(inst[0],inst[1]);
 		}
 		var i = 0;
 		while(i < data.strokes.length) {
@@ -1063,7 +1134,7 @@ ddw.VexDrawJsonReader.prototype = {
 			++_g;
 			var tl = this.parseTimeline(dtl);
 			vo.definitions.set(tl.id,tl);
-			if(tl.name != null) vo.definitionNameTable.set(tl.id,tl.name);
+			if(tl.name != null) vo.definitionNameTable.set(tl.name,tl.id);
 		}
 		if(onParseComplete != null) onParseComplete();
 	}
@@ -1076,8 +1147,8 @@ ddw.VexObject = function() {
 	this.gradientStart = 0;
 	this.fills = new Array();
 	this.strokes = new Array();
-	this.definitionNameTable = new IntHash();
-	this.instanceNameTable = new IntHash();
+	this.definitionNameTable = new Hash();
+	this.instanceNameLookupTable = new IntHash();
 	this.pathTable = new Array();
 	this.definitions = new IntHash();
 	this.timelineStack = new Array();
@@ -1124,6 +1195,12 @@ ddw.VexObject.prototype = {
 		if(tlDef != null && js.Boot.__instanceof(tlDef,ddw.Timeline)) {
 			var tl = tlDef;
 			ddw.Timeline.drawTimeline(tl,this);
+		}
+	}
+	,drawTimelineByName: function(name) {
+		if(this.definitionNameTable.exists(name)) {
+			var id = this.definitionNameTable.get(name);
+			this.drawTimeline(id);
 		}
 	}
 	,transformObject: function(obj,instance,offsetX,offsetY) {
